@@ -11,7 +11,7 @@ namespace Shoko.Plugin.Tmdb;
 ///   The bundled first-party plugin for TMDB, which serves the <c>tmdb</c>
 ///   source.
 /// </summary>
-public class Plugin : IPlugin, IPluginServiceRegistration
+public class Plugin : IPlugin<TmdbConfiguration>, IPluginServiceRegistration
 {
     /// <summary>
     ///   The plugin's ID. Kept as a literal, because the build reads the
