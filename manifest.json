@@ -19,6 +19,22 @@
   "icon_url": "https://raw.githubusercontent.com/ShokoAnime/Shoko.Plugin.Tmdb/stable/source/Assets/icon.svg",
   "releases": [
     {
+      "version": "1.1.0",
+      "tag": "v1.1.0",
+      "released_at": "2026-10-15T09:34:00.2741588Z",
+      "channel": "Stable",
+      "release_notes": "Its settings are now the plugin\u0027s own settings, so a client can open them from the plugin. Metadata behaves as before.\n\nRequires Shoko Server with abstractions \u00606.0.0-alpha.107\u0060.",
+      "dependencies": [],
+      "archives": [
+        {
+          "runtime": "any",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/ShokoAnime/Shoko.Plugin.Tmdb/releases/download/v1.1.0/TMDB-v1.1.0-any.zip",
+          "checksum": "sha256:497c8e72a2b44cc24c2abcbad134863f76c863843bbe740be87d22dfc4e0dc3e"
+        }
+      ]
+    },
+    {
       "version": "1.0.0",
       "tag": "v1.0.0",
       "released_at": "2026-10-15T05:18:34.867127Z",
