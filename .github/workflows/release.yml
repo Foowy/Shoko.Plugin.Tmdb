@@ -80,10 +80,17 @@ jobs:
           # empty one just leaves the notes off the release entry.
           printf '%s' "${RELEASE_BODY}" > "${RUNNER_TEMP}/release-notes.md"
 
+      - name: Build
+        run: dotnet build Shoko.Plugin.Tmdb.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test Shoko.Plugin.Tmdb.slnx --configuration Release --no-build
+
       # Official builds carry a built-in TMDB key. Without the secret the
       # placeholder stays, and the plugin asks for a key in its settings.
       # The reset before the manifest commit puts the placeholder back, so
-      # the key is never committed.
+      # the key is never committed. After the tests, which cover running
+      # without a key.
       - name: Stamp the TMDB API key
         env:
           TMDB_API: ${{ secrets.TMDB_API }}
@@ -93,12 +100,6 @@ jobs:
           else
             echo "::warning::No TMDB_API secret; the release ships without a built-in key."
           fi
-
-      - name: Build
-        run: dotnet build Shoko.Plugin.Tmdb.slnx --configuration Release
-
-      - name: Test
-        run: dotnet test Shoko.Plugin.Tmdb.slnx --configuration Release --no-build
 
       # Pinned in .config/dotnet-tools.json, so the packaging of a release
       # is reproducible instead of depending on whichever shoko-build is
