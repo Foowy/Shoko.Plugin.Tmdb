@@ -1,4 +1,4 @@
-<Project TreatAsLocalProperty="Version;InformationalVersion;TargetFramework" Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <OutputType>Library</OutputType>
@@ -15,15 +15,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Shoko.Tests" />
+        <InternalsVisibleTo Include="Shoko.Plugin.Tmdb.Tests" />
     </ItemGroup>
 
-    <ItemGroup>
-        <!-- The server supplies the abstractions at runtime, and a plugin that
-             ships its own copy resolves `IPlugin` against that copy and is then
-             skipped without an error, so the dll and the packages it brings
-             stay out of the output. -->
-        <ProjectReference Include="..\Shoko.Abstractions\Shoko.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
+    <!-- The server supplies the abstractions at runtime, and a plugin that
+         ships its own copy resolves `IPlugin` against that copy and is then
+         skipped without an error, so the dll and the packages it brings stay
+         out of the output. -->
+    <ItemGroup Condition="'$(ShokoRepositoryPath)' != ''">
+        <ProjectReference Include="$(ShokoRepositoryPath)/Shoko.Abstractions/Shoko.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
+        <!-- Checks the plugin's configurations and actions with the analyzer,
+             which is only built from a checkout. -->
+        <ProjectReference Include="$(ShokoRepositoryPath)/Shoko.BuildTools.Analyzers/Shoko.BuildTools.Analyzers.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false"
+                          PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(ShokoRepositoryPath)' == ''">
+        <PackageReference Include="Shoko.Abstractions" Version="$(ShokoAbstractionsVersion)" ExcludeAssets="runtime" PrivateAssets="All" />
     </ItemGroup>
 
     <ItemGroup>
@@ -41,19 +51,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Checks the plugin's configurations and actions with the analyzer as
-             it is in this repository, as the server's are. A plugin outside it
-             references the Shoko.BuildTools.Analyzers package instead. -->
-        <ProjectReference Include="..\Shoko.BuildTools.Analyzers\Shoko.BuildTools.Analyzers.csproj"
-                          OutputItemType="Analyzer"
-                          ReferenceOutputAssembly="false"
-                          PrivateAssets="all" />
-    </ItemGroup>
-
-    <ItemGroup>
         <!-- Injects the embedded plugin identity metadata the server reads during
-             discovery. With no `manifest.json` beside this file, the ID, name and
-             description are read from the literals in `Plugin.cs`. -->
-        <PackageReference Include="Shoko.BuildTools.Targets" Version="0.3.2" PrivateAssets="All" ExcludeAssets="runtime" />
+             discovery, from the `manifest.json` at the repository root. -->
+        <PackageReference Include="Shoko.BuildTools.Targets" Version="0.3.3" PrivateAssets="All" ExcludeAssets="runtime" />
     </ItemGroup>
 </Project>

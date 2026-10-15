@@ -1,0 +1,10 @@
+<Project>
+    <PropertyGroup>
+        <!-- Point this at a Shoko checkout to build against its projects, the
+             analyzer included, instead of the packages below. -->
+        <ShokoRepositoryPath Condition="'$(ShokoRepositoryPath)' == ''"></ShokoRepositoryPath>
+
+        <!-- Used only without a checkout. -->
+        <ShokoAbstractionsVersion>6.0.0-alpha.105</ShokoAbstractionsVersion>
+    </PropertyGroup>
+</Project>

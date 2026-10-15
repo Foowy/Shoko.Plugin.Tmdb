@@ -1,0 +1,166 @@
+name: Release Build
+
+# Fires when a release is published: builds the archive at the release's
+# tag, uploads it to the release, and writes the release entry into the
+# manifest on the `metadata` branch.
+
+on:
+  release:
+    types: [published]
+
+env:
+  # The published manifest lives on a branch of its own and CI writes
+  # nowhere else. A manifest committed to `stable` is a bot commit on the
+  # branch people work from, which everyone then has to pull before their
+  # next push.
+  METADATA_BRANCH: metadata
+  # One manifest at the branch root. This repository holds one plugin and
+  # cuts stable releases alone, so there is neither a plugin axis nor a
+  # channel axis to spend a path segment on.
+  MANIFEST_PATH: manifest.json
+  # The stub in the work tree. `Shoko.BuildTools.Targets` reaches it from
+  # `source/` through the parent leg of its search and stamps what it
+  # reads into the assembly; shoko-build takes identity and tags from the
+  # same path and writes the release entry back into it. The live manifest
+  # is pulled over it before anything builds, so the embedded metadata and
+  # the published manifest cannot disagree, and the reset in the last step
+  # puts the stub back.
+  IDENTITY_MANIFEST: manifest.json
+  # GitHub serves release assets from its own download route under the
+  # repository, so the base is the server and repository this run already
+  # names rather than a CDN in front of them.
+  ASSET_BASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/download
+
+jobs:
+  build:
+    # Pinned. `ubuntu-latest` is a moving pointer, and 24.04 is the image
+    # that carries node24, which the action pins below need, node20 being
+    # end of life.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # The image has no SDK. `global-json-file` rather than a literal
+      # version, so this cannot drift from what a developer builds with.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Fetch the live manifest
+        run: |
+          # checkout only sets up a remote-tracking ref for the branch it
+          # checked out, hence the explicit refspec.
+          #
+          # No fallback. The branch is seeded by hand once; falling back
+          # to the stub in the work tree would publish a release against a
+          # description that says it is a stub, with an empty release list
+          # in front of it. A fetch of a refspec naming a branch the
+          # remote does not have exits 128 with "couldn't find remote
+          # ref", so a first run stops here, before the build and well
+          # before the upload.
+          git fetch --no-tags origin "+refs/heads/${METADATA_BRANCH}:refs/remotes/origin/${METADATA_BRANCH}"
+          git show "origin/${METADATA_BRANCH}:${MANIFEST_PATH}" > "${IDENTITY_MANIFEST}"
+
+      - name: Read the release notes
+        env:
+          # Through the environment rather than as an expression inside
+          # `run:`. Release notes are arbitrary markdown from a human, and
+          # interpolating them into a shell script would let a backtick or
+          # a `$(` in someone's notes run as a command on the runner.
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          # GitHub carries the body on the release event, so it is taken
+          # from there rather than read back from the API. The file is
+          # always written, empty when the release carries no body: a
+          # --release-notes-path shoko-build cannot read stops it, while an
+          # empty one just leaves the notes off the release entry.
+          printf '%s' "${RELEASE_BODY}" > "${RUNNER_TEMP}/release-notes.md"
+
+      # Official builds carry a built-in TMDB key. Without the secret the
+      # placeholder stays, and the plugin asks for a key in its settings.
+      # The reset before the manifest commit puts the placeholder back, so
+      # the key is never committed.
+      - name: Stamp the TMDB API key
+        env:
+          TMDB_API: ${{ secrets.TMDB_API }}
+        run: |
+          if [ -n "${TMDB_API}" ]; then
+            sed -i "s|TMDB_API_KEY_GOES_HERE|${TMDB_API}|" source/Constants.cs
+          else
+            echo "::warning::No TMDB_API secret; the release ships without a built-in key."
+          fi
+
+      - name: Build
+        run: dotnet build Shoko.Plugin.Tmdb.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test Shoko.Plugin.Tmdb.slnx --configuration Release --no-build
+
+      # Pinned in .config/dotnet-tools.json, so the packaging of a release
+      # is reproducible instead of depending on whichever shoko-build is
+      # latest on the day it is cut.
+      - name: Restore the build tool
+        run: dotnet tool restore
+
+      # shoko-build discovers the plugin tags from the source, builds the
+      # project, packs the whole output directory (dependencies and the
+      # .deps.json included, not just the plugin assembly), checksums the
+      # archive and writes the release entry into the manifest with the
+      # abstraction version the assembly was actually compiled against. It
+      # reads the project from the working directory, hence `source`, and
+      # updates the manifest in place - the live one, fetched over the stub
+      # by the step above.
+      - name: Build and package
+        working-directory: source
+        run: |
+          dotnet shoko-build \
+            --configuration Release \
+            --channel Stable \
+            --tag "${{ github.event.release.tag_name }}" \
+            --release-notes-path "${RUNNER_TEMP}/release-notes.md" \
+            --manifest "${GITHUB_WORKSPACE}/${IDENTITY_MANIFEST}" \
+            --output "${GITHUB_WORKSPACE}/dist/{name}-{tag}-{runtime}.zip" \
+            --url "${ASSET_BASE_URL}/{tag}/{name}-{tag}-{runtime}.zip"
+
+      # A glob rather than a name, so an archive per runtime identifier
+      # uploads without touching this step.
+      - name: Upload to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            dist/*.zip \
+            --repo "${{ github.repository }}"
+
+      - name: Commit the manifest on the metadata branch
+        run: |
+          # The manifest travels in RUNNER_TEMP rather than in a stash: a
+          # stash of a path that already exists on the metadata branch
+          # conflicts on every apply. The work tree also has to be clean
+          # to switch branches, and the reset puts the stub back over the
+          # live manifest fetched above, so the copy has to happen first.
+          cp "${IDENTITY_MANIFEST}" "${RUNNER_TEMP}/manifest.json"
+          git reset --hard
+          git checkout -B "${METADATA_BRANCH}" "origin/${METADATA_BRANCH}"
+          cp "${RUNNER_TEMP}/manifest.json" "${MANIFEST_PATH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${MANIFEST_PATH}"
+          # The only commit and the only push, and it is on the metadata
+          # branch. Nothing lands on a source branch, so nobody has to
+          # pull a bot commit before their next change.
+          #
+          # Guarded, because `git commit` exits 1 on an empty index and
+          # this step runs after the asset is uploaded: a re-run that
+          # produced a byte-identical manifest would otherwise fail a
+          # release that had already succeeded.
+          if git diff --cached --quiet; then
+            echo "Manifest unchanged; nothing to commit."
+          else
+            git commit -m "ci: update manifest for ${{ github.event.release.tag_name }}"
+            git push origin "${METADATA_BRANCH}"
+          fi

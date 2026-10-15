@@ -1,9 +1,14 @@
 # Shoko TMDB Metadata
 
-The bundled first-party plugin that serves the `tmdb` source: TMDB's shows,
-seasons, episodes, movies and collections, and the people, companies and
-networks behind them. It ships with the server in `plugins/Shoko.Plugin.Tmdb/`,
-is enabled by default and cannot be uninstalled.
+The first-party plugin that serves the `tmdb` source: TMDB's shows, seasons,
+episodes, movies and collections, and the people, companies and networks
+behind them. Official server builds bundle its latest release in
+`plugins/Shoko.Plugin.Tmdb/`, where it is enabled by default and cannot be
+uninstalled. A server built from source can install it from the Shoko Core
+Repository instead (Settings → Plugin Management → Browse).
+
+Report problems in the [issue tracker](https://github.com/ShokoAnime/Shoko.Plugin.Tmdb/issues)
+or on [Discord](https://discord.gg/vpeHDsg).
 
 ## What it does
 
@@ -66,11 +71,10 @@ candidates an auto-search scores.
 
 ## API key
 
-Official builds carry a key of their own: CI stamps it into
-`Constants.ApiKey` from the `TMDB_API` secret with
-`.github/workflows/ReplaceTmdbApiKey.ps1`. A configured `UserApiKey` takes
-precedence. Without either, the provider says it is not configured, and the
-core answers its routes with `503`.
+Official builds carry a key of their own: the release workflow stamps it
+into `Constants.ApiKey` from the `TMDB_API` secret. A configured `UserApiKey`
+takes precedence. Without either, the provider says it is not configured, and
+the core answers its routes with `503`.
 
 ## Rate limiting
 
@@ -89,5 +93,22 @@ takes precedence.
 
 ## Thumbnail and icon
 
-`Assets/thumbnail.svg` and `Assets/icon.svg` are embedded resources. The icon
+`source/Assets/thumbnail.svg` and `source/Assets/icon.svg` are embedded resources. The icon
 is the plugin's and the `tmdb` source's alike.
+
+## Building
+
+```
+dotnet build Shoko.Plugin.Tmdb.slnx -c Release
+dotnet test Shoko.Plugin.Tmdb.slnx -c Release
+```
+
+It builds against the published `Shoko.Abstractions` package. To build
+against a Shoko checkout instead, which also runs the configuration analyzer,
+pass `-p:ShokoRepositoryPath=/path/to/Shoko`. A local build has no built-in
+TMDB key; set one in the plugin's settings.
+
+Releases are cut by publishing a GitHub release at a `v<version>` tag on
+`stable`: the workflow stamps the key, builds and tests the plugin, attaches
+the archive and writes the release into the manifest on the `metadata`
+branch.

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <Configurations>Debug;Release</Configurations>
+        <Platforms>AnyCPU;x64</Platforms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+        <PackageReference Include="Moq" Version="4.20.72" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="xunit.v3" Version="3.2.2" />
+    </ItemGroup>
+
+    <!-- The plugin leaves the abstractions out of its output, so the tests
+         bring their own copy to run against. -->
+    <ItemGroup Condition="'$(ShokoRepositoryPath)' != ''">
+        <ProjectReference Include="$(ShokoRepositoryPath)/Shoko.Abstractions/Shoko.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(ShokoRepositoryPath)' == ''">
+        <PackageReference Include="Shoko.Abstractions" Version="$(ShokoAbstractionsVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../source/Shoko.Plugin.Tmdb.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The plugin leaves the server's Newtonsoft.Json out of its output,
+             so the tests bring it. -->
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <Content Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>
