@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ShokoAnime/ShokoServer/master/Shoko.BuildTools/manifest.schema.json",
+  "id": "85d0c34f-240f-4da3-8512-d0b45118a9f4",
+  "type": "package",
+  "name": "TMDB",
+  "overview": "Supplies TMDB metadata for shows, movies, collections, people, studios and networks.",
+  "authors": "Shoko Team",
+  "repository_url": "https://github.com/ShokoAnime/Shoko.Plugin.Tmdb",
+  "tags": [
+    "metadata-provider",
+    "tmdb"
+  ],
+  "releases": [],
+  "thumbnail_url": "https://raw.githubusercontent.com/ShokoAnime/Shoko.Plugin.Tmdb/stable/source/Assets/thumbnail.svg",
+  "icon_url": "https://raw.githubusercontent.com/ShokoAnime/Shoko.Plugin.Tmdb/stable/source/Assets/icon.svg"
+}
