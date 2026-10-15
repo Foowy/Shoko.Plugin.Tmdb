@@ -36,7 +36,10 @@ public sealed class TmdbEntityRefreshTests : IDisposable
         Assert.Null(creator.DeathDay);
         Assert.Equal("Ōita Prefecture, Japan", creator.PlaceOfBirth);
         Assert.False(creator.IsRestricted);
-        Assert.Equal(["種崎敦美", "Tanezaki Atsumi"], creator.AlternativeNames.Select(name => name.Name));
+        Assert.Equal(["種崎敦美", "Tanezaki Atsumi"], creator.Synonyms.Select(name => name.Name));
+        // The translations' names are the official ones, in the kept languages only, and the place of birth gives the origin.
+        Assert.Equal([("en-US", "Atsumi Tanezaki"), ("ja", "種崎敦美")], creator.Titles.Select(name => (name.LanguageCode, name.Name)));
+        Assert.Equal(("JP", "ja"), (creator.OriginalCountryCode, creator.OriginalLanguageCode));
         Assert.Equal(["https://example.com/tanezaki", "https://www.imdb.com/name/nm5001/"], creator.Resources.Select(resource => resource.Url));
         Assert.Equal([(ImageEntityType.Primary, "p-5001.jpg")], creator.DefaultImageResourceIDs!.Select(pair => (pair.Key, pair.Value)));
 

@@ -154,7 +154,7 @@ public sealed class TmdbMappingTests
             cast.Name == "Frieren" &&
             cast.Description == TmdbCredits.GuestStarNotes &&
             cast.LanguageCode == "ja" &&
-            cast.Creator == Mock.Of<ICreator>(creator => creator.Name == "Atsumi Tanezaki"));
+            cast.Creator == Mock.Of<ICreator>(creator => creator.DefaultTitle == Mock.Of<ITitle>(title => title.Value == "Atsumi Tanezaki")));
 
         Assert.Equal(
             new MetadataCastData { CreatorID = TmdbIds.Creator(1), CreatorName = "Atsumi Tanezaki", Name = "Frieren", LanguageCode = "ja", RoleNotes = TmdbCredits.GuestStarNotes },

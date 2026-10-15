@@ -321,7 +321,7 @@ internal sealed class TmdbFakeStores
         cast.SetupGet(mock => mock.Name).Returns(data.Name);
         cast.SetupGet(mock => mock.Description).Returns(data.RoleNotes);
         cast.SetupGet(mock => mock.LanguageCode).Returns(data.LanguageCode ?? string.Empty);
-        cast.SetupGet(mock => mock.Creator).Returns(data.CreatorID is { } creatorID ? Mock.Of<ICreator>(creator => creator.ID == creatorID && creator.Name == (data.CreatorName ?? string.Empty)) : null);
+        cast.SetupGet(mock => mock.Creator).Returns(data.CreatorID is { } creatorID ? Mock.Of<ICreator>(creator => creator.ID == creatorID && creator.DefaultTitle == Mock.Of<ITitle>(title => title.Value == (data.CreatorName ?? string.Empty))) : null);
         return cast.Object;
     }
 
@@ -333,7 +333,7 @@ internal sealed class TmdbFakeStores
         crew.SetupGet(mock => mock.Name).Returns(data.Name);
         crew.SetupGet(mock => mock.RoleType).Returns(data.RoleType);
         crew.SetupGet(mock => mock.LanguageCode).Returns(data.LanguageCode ?? string.Empty);
-        crew.SetupGet(mock => mock.Creator).Returns(Mock.Of<ICreator>(creator => creator.ID == data.CreatorID && creator.Name == (data.CreatorName ?? string.Empty)));
+        crew.SetupGet(mock => mock.Creator).Returns(Mock.Of<ICreator>(creator => creator.ID == data.CreatorID && creator.DefaultTitle == Mock.Of<ITitle>(title => title.Value == (data.CreatorName ?? string.Empty))));
         return crew.Object;
     }
 

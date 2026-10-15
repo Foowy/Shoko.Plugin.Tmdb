@@ -4,6 +4,7 @@ using System.Linq;
 using Shoko.Abstractions.Extensions;
 using Shoko.Abstractions.Metadata;
 using Shoko.Abstractions.Metadata.Enums;
+using Shoko.Abstractions.Metadata.Storage;
 using Shoko.Abstractions.Metadata.Stub;
 using TMDbLib.Objects.General;
 
@@ -111,6 +112,34 @@ public static class TmdbTexts
         }
 
         return titles;
+    }
+
+    /// <summary>
+    ///   A person's official names, one per language, from the names their
+    ///   translations give. A regional translation keeps its region in the
+    ///   code only when the region tells a language of its own apart, such
+    ///   as <c>zh-TW</c>.
+    /// </summary>
+    /// <param name="translations">The translations TMDB lists, or <c>null</c>.</param>
+    /// <param name="languages">The languages to keep, or <c>null</c> for all.</param>
+    /// <returns>The names, in TMDB's order.</returns>
+    public static IReadOnlyList<MetadataNameData> PersonNames(TranslationsContainer? translations, IReadOnlySet<TitleLanguage>? languages)
+    {
+        var names = new List<MetadataNameData>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var translation in translations?.Translations ?? [])
+        {
+            var languageCode = translation.Iso_639_1?.Trim().ToLowerInvariant() ?? string.Empty;
+            var countryCode = translation.Iso_3166_1?.Trim().ToUpperInvariant() ?? string.Empty;
+            if (Language(languageCode, null) is TitleLanguage.None || !Wanted(languages, languageCode, countryCode) || Clean(translation.Data?.Name) is not { } value)
+                continue;
+
+            var code = countryCode.Length > 0 && Language(languageCode, countryCode) != Language(languageCode, null) ? $"{languageCode}-{countryCode}" : languageCode;
+            if (seen.Add(code))
+                names.Add(new() { Name = value, LanguageCode = code });
+        }
+
+        return names;
     }
 
     #endregion

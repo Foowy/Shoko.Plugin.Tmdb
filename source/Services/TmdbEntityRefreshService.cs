@@ -89,11 +89,11 @@ public sealed class TmdbEntityRefreshService(
             return false;
         }
 
-        var creator = TmdbEntityMapper.ToCreatorData(person) with { ID = TmdbIds.Creator(personID) };
+        var languages = TmdbTextLanguages.From(configurationProvider.Load(), stores.Texts);
+        var creator = TmdbEntityMapper.ToCreatorData(person, languages) with { ID = TmdbIds.Creator(personID) };
         stores.People.SaveCreators([creator]);
 
         // The English biography is the person's own; the others go through the text manager.
-        var languages = TmdbTextLanguages.From(configurationProvider.Load(), stores.Texts);
         var overviews = TmdbTexts.Overviews(creator.Overview, person.Translations, languages.Overviews)
             .Where(overview => !(overview.LanguageCode is "en" && overview.CountryCode is "US"))
             .ToList();

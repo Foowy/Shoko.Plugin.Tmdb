@@ -51,6 +51,7 @@ public static class TmdbEntityMapper
             Restricted = show.Adult,
             ReleaseStatus = status,
             OriginalLanguageCode = TmdbTexts.Clean(show.OriginalLanguage),
+            OriginalCountryCode = (show.OriginCountry ?? []).Select(TmdbTexts.Clean).OfType<string>().FirstOrDefault()?.ToUpperInvariant(),
             ProductionCountries = CountryCodes(show.ProductionCountries),
             Popularity = show.Popularity > 0 ? show.Popularity : null,
             Resources = Homepage(show.Homepage),
@@ -219,18 +220,24 @@ public static class TmdbEntityMapper
     ///   A person, as their own record on TMDB has them.
     /// </summary>
     /// <param name="person">The person, with their translations and external IDs.</param>
+    /// <param name="languages">The languages to keep the person's names in, or <c>null</c> for all.</param>
     /// <returns>The creator to store.</returns>
-    public static MetadataCreatorData ToCreatorData(Person person)
+    public static MetadataCreatorData ToCreatorData(Person person, TmdbTextLanguages? languages = null)
     {
         ArgumentNullException.ThrowIfNull(person);
 
+        // TMDB gives no origin for a person, so it is guessed from where they were born.
+        var country = LanguageExtensions.TryGetCountryCodeFromPlace(person.PlaceOfBirth, out var countryCode) ? countryCode : null;
         return new()
         {
             ID = TmdbIds.Creator(person.Id),
             Name = TmdbTexts.Clean(person.Name) ?? string.Empty,
             Overview = TmdbTexts.English(person.Translations, data => data.Overview, person.Biography),
             Type = CreatorType.Person,
-            AlternativeNames = [.. (person.AlsoKnownAs ?? []).Select(TmdbTexts.Clean).OfType<string>().Distinct().Select(name => new MetadataNameData { Name = name })],
+            OriginalCountryCode = country,
+            OriginalLanguageCode = LanguageExtensions.GetLanguageCodeFromCountryCode(country),
+            Titles = TmdbTexts.PersonNames(person.Translations, languages?.Titles),
+            Synonyms = [.. (person.AlsoKnownAs ?? []).Select(TmdbTexts.Clean).OfType<string>().Distinct().Select(name => new MetadataNameData { Name = name })],
             Gender = GenderOf(person.Gender),
             BirthDay = person.Birthday is { } birthday ? new FuzzyDateOnly(DateOnly.FromDateTime(birthday)) : null,
             DeathDay = person.Deathday is { } deathday ? new FuzzyDateOnly(DateOnly.FromDateTime(deathday)) : null,

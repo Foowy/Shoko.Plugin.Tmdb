@@ -214,7 +214,7 @@ public static class TmdbCredits
         => new()
         {
             CreatorID = cast.CreatorID,
-            CreatorName = cast.Creator?.Name,
+            CreatorName = cast.Creator?.DefaultTitle.Value,
             CharacterID = cast.CharacterID,
             Name = cast.Name,
             RoleType = cast.RoleType,
@@ -232,7 +232,7 @@ public static class TmdbCredits
         => new()
         {
             CreatorID = crew.CreatorID,
-            CreatorName = crew.Creator?.Name,
+            CreatorName = crew.Creator?.DefaultTitle.Value,
             Name = crew.Name,
             RoleType = crew.RoleType,
             LanguageCode = string.IsNullOrEmpty(crew.LanguageCode) ? null : crew.LanguageCode,

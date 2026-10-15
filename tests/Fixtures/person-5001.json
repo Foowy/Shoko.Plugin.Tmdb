@@ -23,8 +23,9 @@
   },
   "translations": {
     "translations": [
-      { "iso_3166_1": "US", "iso_639_1": "en", "name": "English", "english_name": "English", "data": { "biography": "A Japanese voice actress." } },
-      { "iso_3166_1": "DE", "iso_639_1": "de", "name": "Deutsch", "english_name": "German", "data": { "overview": "Eine japanische Synchronsprecherin." } }
+      { "iso_3166_1": "US", "iso_639_1": "en", "name": "English", "english_name": "English", "data": { "name": "Atsumi Tanezaki", "biography": "A Japanese voice actress." } },
+      { "iso_3166_1": "JP", "iso_639_1": "ja", "name": "日本語", "english_name": "Japanese", "data": { "name": "種崎敦美", "biography": "" } },
+      { "iso_3166_1": "DE", "iso_639_1": "de", "name": "Deutsch", "english_name": "German", "data": { "name": "Atsumi Tanezaki", "overview": "Eine japanische Synchronsprecherin." } }
     ]
   }
 }
