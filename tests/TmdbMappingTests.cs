@@ -6,6 +6,7 @@ using Shoko.Abstractions.Metadata.Enums;
 using Shoko.Abstractions.Metadata.Storage;
 using Shoko.Plugin.Tmdb.Mapping;
 using TMDbLib.Objects.General;
+using TMDbLib.Objects.People;
 using TMDbLib.Objects.TvShows;
 using Xunit;
 

@@ -41,7 +41,7 @@ public static class TmdbEntityMapper
         return new()
         {
             ID = TmdbIds.Series(show.Id),
-            Titles = TmdbTexts.Titles(english, show.OriginalName, show.OriginalLanguage, show.Translations, show.AlternativeTitles?.Results, languages.Titles, ownName: show.Name),
+            Titles = TmdbTexts.Titles(english, show.OriginalName, show.OriginalLanguage, show.Translations, show.AlternativeTitles?.Results, languages.SeriesTitles, ownName: show.Name),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(show.Translations, data => data.Overview, show.Overview, originalLanguageCode: show.OriginalLanguage), show.Translations, languages.Overviews),
             Type = AnimeType.TV,
             AirDate = PartialDateOnly.FromDateTime(show.FirstAirDate),
@@ -78,7 +78,7 @@ public static class TmdbEntityMapper
         {
             ID = TmdbIds.Season(season.Id ?? 0),
             SeasonNumber = season.SeasonNumber,
-            Titles = TmdbTexts.Titles(english, null, null, season.Translations, null, languages.Titles, ownName: season.Name),
+            Titles = TmdbTexts.Titles(english, null, null, season.Translations, null, languages.EpisodeTitles, ownName: season.Name),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(season.Translations, data => data.Overview, season.Overview), season.Translations, languages.Overviews),
             DefaultImageResourceIDs = TmdbImages.Defaults((ImageEntityType.Primary, season.PosterPath)),
         };
@@ -150,7 +150,7 @@ public static class TmdbEntityMapper
         return new()
         {
             ID = TmdbIds.Movie(movie.Id),
-            Titles = TmdbTexts.Titles(english, movie.OriginalTitle, movie.OriginalLanguage, movie.Translations, movie.AlternativeTitles?.Titles, languages.Titles, ownName: movie.Title),
+            Titles = TmdbTexts.Titles(english, movie.OriginalTitle, movie.OriginalLanguage, movie.Translations, movie.AlternativeTitles?.Titles, languages.SeriesTitles, ownName: movie.Title),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(movie.Translations, data => data.Overview, movie.Overview, originalLanguageCode: movie.OriginalLanguage), movie.Translations, languages.Overviews),
             ReleaseDate = ReleaseDateOf(movie) is { } released ? DateOnly.FromDateTime(released) : null,
             Runtime = movie.Runtime is > 0 ? TimeSpan.FromMinutes(movie.Runtime.Value) : null,
@@ -205,7 +205,7 @@ public static class TmdbEntityMapper
         return new()
         {
             ID = TmdbIds.Collection(collection.Id),
-            Titles = TmdbTexts.Titles(english, null, null, collection.Translations, null, languages.Titles, ownName: collection.Name),
+            Titles = TmdbTexts.Titles(english, null, null, collection.Translations, null, languages.SeriesTitles, ownName: collection.Name),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(collection.Translations, data => data.Overview, collection.Overview), collection.Translations, languages.Overviews),
             Members = [.. (collection.Parts ?? []).Where(part => part.Id > 0).Select(part => TmdbIds.Movie(part.Id)).Distinct()],
             DefaultImageResourceIDs = TmdbImages.Defaults((ImageEntityType.Primary, collection.PosterPath), (ImageEntityType.Backdrop, collection.BackdropPath)),
@@ -232,7 +232,7 @@ public static class TmdbEntityMapper
         return new()
         {
             ID = TmdbIds.Creator(person.Id),
-            Titles = TmdbTexts.PersonNames(person.Name, person.Translations, person.AlsoKnownAs, languages?.Titles, language, country),
+            Titles = TmdbTexts.PersonNames(person.Name, person.Translations, person.AlsoKnownAs, languages?.EpisodeTitles, language, country),
             Overviews = TmdbTexts.Biographies(TmdbTexts.English(person.Translations, data => data.Overview, person.Biography), person.Translations, languages?.Overviews),
             Type = CreatorType.Person,
             OriginalCountryCode = country,
