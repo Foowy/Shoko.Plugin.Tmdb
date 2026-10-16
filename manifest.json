@@ -19,6 +19,22 @@
   "icon_url": "https://raw.githubusercontent.com/ShokoAnime/Shoko.Plugin.Tmdb/stable/source/Assets/icon.svg",
   "releases": [
     {
+      "version": "1.2.0",
+      "tag": "v1.2.0",
+      "released_at": "2026-10-16T06:55:14.0856342Z",
+      "channel": "Stable",
+      "release_notes": "People are now named like every other entry: TMDB\u0027s own name for a person is their main title, in American English or their own language when one of those translations gives the same name, and the names of their other translations are their official titles, region included. Their biographies are kept per language, English first. Seasons and people follow the episode title languages.\n\nRequires Shoko Server with abstractions \u00606.0.0-alpha.108\u0060.",
+      "dependencies": [],
+      "archives": [
+        {
+          "runtime": "any",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/ShokoAnime/Shoko.Plugin.Tmdb/releases/download/v1.2.0/TMDB-v1.2.0-any.zip",
+          "checksum": "sha256:9daebe0e15a17acaec4a5b19be748f991311af9cbad191bc08d5eb2778adf46c"
+        }
+      ]
+    },
+    {
       "version": "1.1.0",
       "tag": "v1.1.0",
       "released_at": "2026-10-15T09:34:00.2741588Z",
