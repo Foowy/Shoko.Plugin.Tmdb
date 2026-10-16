@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -75,8 +74,8 @@ public sealed class TmdbEntityRefreshService(
     }
 
     /// <summary>
-    ///   Fetches a person and writes them, with their biographies in the
-    ///   languages kept, the English one on the person itself.
+    ///   Fetches a person and writes them, with their names and biographies
+    ///   in the languages kept.
     /// </summary>
     /// <param name="personID">The TMDB person ID.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
@@ -92,12 +91,6 @@ public sealed class TmdbEntityRefreshService(
         var languages = TmdbTextLanguages.From(configurationProvider.Load(), stores.Texts);
         var creator = TmdbEntityMapper.ToCreatorData(person, languages) with { ID = TmdbIds.Creator(personID) };
         stores.People.SaveCreators([creator]);
-
-        // The English biography is the person's own; the others go through the text manager.
-        var overviews = TmdbTexts.Overviews(creator.Overview, person.Translations, languages.Overviews)
-            .Where(overview => !(overview.LanguageCode is "en" && overview.CountryCode is "US"))
-            .ToList();
-        stores.Texts.SetOverviews(creator.ID, MetadataSource.TMDB, overviews);
 
         if (person.Images?.Profiles is { } profiles)
             _personImages[personID] = (apiClient.TimeProvider.GetUtcNow(), profiles);

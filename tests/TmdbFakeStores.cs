@@ -69,10 +69,7 @@ internal sealed class TmdbFakeStores
     /// <summary>The orderings removed.</summary>
     public List<MetadataGuid> RemovedOrderings { get; } = [];
 
-    /// <summary>The overviews set through the text manager, by entry.</summary>
-    public Dictionary<MetadataGuid, IReadOnlyList<IText>> SetOverviews { get; } = [];
-
-    /// <summary>The language order the text manager hands out.</summary>
+    /// <summary>The languages of the title and overview selections the text manager hands out, best first.</summary>
     public List<TitleLanguage> LanguageOrder { get; } = [TitleLanguage.EnglishAmerican, TitleLanguage.Romaji, TitleLanguage.Japanese];
 
     /// <summary>How many times each kind of save ran.</summary>
@@ -234,11 +231,12 @@ internal sealed class TmdbFakeStores
     private IMetadataTextManager TextManager()
     {
         var manager = new Mock<IMetadataTextManager>(MockBehavior.Strict);
-        manager.Setup(mock => mock.GetLanguageOrder(It.IsAny<TextKind>(), It.IsAny<MetadataEntityType?>())).Returns(() => LanguageOrder);
+        manager.Setup(mock => mock.GetTitleSelection(It.IsAny<MetadataEntityType?>(), It.IsAny<IReadOnlyList<MetadataSource>?>()))
+            .Returns(() => new TitleSelection { Steps = [.. LanguageOrder.Select(language => new TitleSelectionStep { Language = language })] });
+        manager.Setup(mock => mock.GetOverviewSelection(It.IsAny<IReadOnlyList<MetadataSource>?>()))
+            .Returns(() => new OverviewSelection { Steps = [.. LanguageOrder.Select(language => new OverviewSelectionStep { Language = language })] });
         manager.Setup(mock => mock.GetTitles(It.IsAny<MetadataGuid>(), It.IsAny<TextFilteringOptions?>())).Returns((MetadataGuid id, TextFilteringOptions? _) => TitlesOf(id));
         manager.Setup(mock => mock.GetOverviews(It.IsAny<MetadataGuid>(), It.IsAny<TextFilteringOptions?>())).Returns((MetadataGuid id, TextFilteringOptions? _) => OverviewsOf(id));
-        manager.Setup(mock => mock.SetOverviews(It.IsAny<MetadataGuid>(), It.IsAny<MetadataSource>(), It.IsAny<IEnumerable<IText>>()))
-            .Callback((MetadataGuid id, MetadataSource _, IEnumerable<IText> overviews) => SetOverviews[id] = [.. overviews]);
         return manager.Object;
     }
 

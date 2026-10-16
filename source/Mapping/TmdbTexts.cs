@@ -4,7 +4,6 @@ using System.Linq;
 using Shoko.Abstractions.Extensions;
 using Shoko.Abstractions.Metadata;
 using Shoko.Abstractions.Metadata.Enums;
-using Shoko.Abstractions.Metadata.Storage;
 using Shoko.Abstractions.Metadata.Stub;
 using TMDbLib.Objects.General;
 
@@ -115,31 +114,80 @@ public static class TmdbTexts
     }
 
     /// <summary>
-    ///   A person's official names, one per language, from the names their
-    ///   translations give. A regional translation keeps its region in the
-    ///   code only when the region tells a language of its own apart, such
-    ///   as <c>zh-TW</c>.
+    ///   A person's names: the one TMDB names them by as the main one, then
+    ///   their official names, one per language, from the names their
+    ///   translations give, then the other names they are known by. The main
+    ///   name takes the language of the translation giving the same name, the
+    ///   American English one first, else the one in the person's own
+    ///   language, which is then not repeated; the other names are in no
+    ///   known language.
     /// </summary>
+    /// <remarks>
+    ///   A name keeps its region in its country code, like an entry's titles,
+    ///   and two regions of a language give two names only when a region
+    ///   tells a language of its own apart, such as <c>zh-TW</c>.
+    /// </remarks>
+    /// <param name="name">The name TMDB names the person by.</param>
     /// <param name="translations">The translations TMDB lists, or <c>null</c>.</param>
-    /// <param name="languages">The languages to keep, or <c>null</c> for all.</param>
-    /// <returns>The names, in TMDB's order.</returns>
-    public static IReadOnlyList<MetadataNameData> PersonNames(TranslationsContainer? translations, IReadOnlySet<TitleLanguage>? languages)
+    /// <param name="otherNames">The other names TMDB lists, or <c>null</c>.</param>
+    /// <param name="languages">The languages to keep official names in, or <c>null</c> for all.</param>
+    /// <param name="originalLanguageCode">The person's own language, or <c>null</c> when unknown.</param>
+    /// <param name="originalCountryCode">The person's own country, or <c>null</c> when unknown.</param>
+    /// <returns>The names, the official ones in TMDB's order.</returns>
+    public static IReadOnlyList<ITitle> PersonNames(
+        string? name,
+        TranslationsContainer? translations,
+        IEnumerable<string?>? otherNames,
+        IReadOnlySet<TitleLanguage>? languages,
+        string? originalLanguageCode = null,
+        string? originalCountryCode = null
+    )
     {
-        var names = new List<MetadataNameData>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var official = new List<(string LanguageCode, string CountryCode, string Value)>();
         foreach (var translation in translations?.Translations ?? [])
         {
             var languageCode = translation.Iso_639_1?.Trim().ToLowerInvariant() ?? string.Empty;
             var countryCode = translation.Iso_3166_1?.Trim().ToUpperInvariant() ?? string.Empty;
-            if (Language(languageCode, null) is TitleLanguage.None || !Wanted(languages, languageCode, countryCode) || Clean(translation.Data?.Name) is not { } value)
-                continue;
-
-            var code = countryCode.Length > 0 && Language(languageCode, countryCode) != Language(languageCode, null) ? $"{languageCode}-{countryCode}" : languageCode;
-            if (seen.Add(code))
-                names.Add(new() { Name = value, LanguageCode = code });
+            if (Language(languageCode, null) is not TitleLanguage.None && Clean(translation.Data?.Name) is { } value)
+                official.Add((languageCode, countryCode, value));
         }
 
+        var names = new List<ITitle>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        if (Clean(name) is { } main)
+        {
+            var origin = originalLanguageCode?.Split('-')[0].Trim().ToLowerInvariant();
+            var match = official
+                .Where(translation => translation.Value == main && (translation is { LanguageCode: "en", CountryCode: "US" } || translation.LanguageCode == origin))
+                .OrderByDescending(translation => translation is { LanguageCode: "en", CountryCode: "US" })
+                .ThenByDescending(translation => string.Equals(translation.CountryCode, originalCountryCode, StringComparison.OrdinalIgnoreCase))
+                .Select(translation => ((string LanguageCode, string CountryCode)?)(translation.LanguageCode, translation.CountryCode))
+                .FirstOrDefault();
+            if (match is { } found)
+            {
+                names.Add(Title(found.LanguageCode, found.CountryCode, main, TitleType.Main));
+                seen.Add(Slot(found.LanguageCode, found.CountryCode));
+            }
+            else
+            {
+                names.Add(Title("unk", string.Empty, main, TitleType.Main));
+            }
+        }
+
+        foreach (var (languageCode, countryCode, value) in official)
+        {
+            if (Wanted(languages, languageCode, countryCode) && seen.Add(Slot(languageCode, countryCode)))
+                names.Add(Title(languageCode, countryCode, value, TitleType.Official));
+        }
+
+        foreach (var otherName in (otherNames ?? []).Select(Clean).OfType<string>().Distinct())
+            names.Add(Title("unk", string.Empty, otherName, TitleType.Synonym));
+
         return names;
+
+        // A name per language, and per region only when the region tells a language of its own apart.
+        static string Slot(string languageCode, string countryCode)
+            => countryCode.Length > 0 && Language(languageCode, countryCode) != Language(languageCode, null) ? $"{languageCode}-{countryCode}" : languageCode;
     }
 
     #endregion
@@ -174,6 +222,25 @@ public static class TmdbTexts
         }
 
         return overviews;
+    }
+
+    /// <summary>
+    ///   A person's biographies: the English one first, in English of no
+    ///   region, then those of the other translations.
+    /// </summary>
+    /// <param name="englishBiography">The English biography, if TMDB has one.</param>
+    /// <param name="translations">The translations TMDB lists, or <c>null</c>.</param>
+    /// <param name="languages">The languages to keep the other biographies in, or <c>null</c> for all.</param>
+    /// <returns>The biographies, in order.</returns>
+    public static IReadOnlyList<IText> Biographies(string? englishBiography, TranslationsContainer? translations, IReadOnlySet<TitleLanguage>? languages)
+    {
+        var biographies = new List<IText>();
+        if (Clean(englishBiography) is { } english)
+            biographies.Add(Overview("en", string.Empty, english));
+
+        // The American English translation is the English biography itself.
+        biographies.AddRange(Overviews(null, translations, languages).Where(overview => !(overview.LanguageCode is "en" && overview.CountryCode is "US")));
+        return biographies;
     }
 
     /// <summary>

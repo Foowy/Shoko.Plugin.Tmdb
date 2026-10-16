@@ -220,7 +220,7 @@ public static class TmdbEntityMapper
     ///   A person, as their own record on TMDB has them.
     /// </summary>
     /// <param name="person">The person, with their translations and external IDs.</param>
-    /// <param name="languages">The languages to keep the person's names in, or <c>null</c> for all.</param>
+    /// <param name="languages">The languages to keep the person's names and biographies in, or <c>null</c> for all.</param>
     /// <returns>The creator to store.</returns>
     public static MetadataCreatorData ToCreatorData(Person person, TmdbTextLanguages? languages = null)
     {
@@ -228,16 +228,15 @@ public static class TmdbEntityMapper
 
         // TMDB gives no origin for a person, so it is guessed from where they were born.
         var country = LanguageExtensions.TryGetCountryCodeFromPlace(person.PlaceOfBirth, out var countryCode) ? countryCode : null;
+        var language = LanguageExtensions.GetLanguageCodeFromCountryCode(country);
         return new()
         {
             ID = TmdbIds.Creator(person.Id),
-            Name = TmdbTexts.Clean(person.Name) ?? string.Empty,
-            Overview = TmdbTexts.English(person.Translations, data => data.Overview, person.Biography),
+            Titles = TmdbTexts.PersonNames(person.Name, person.Translations, person.AlsoKnownAs, languages?.Titles, language, country),
+            Overviews = TmdbTexts.Biographies(TmdbTexts.English(person.Translations, data => data.Overview, person.Biography), person.Translations, languages?.Overviews),
             Type = CreatorType.Person,
             OriginalCountryCode = country,
-            OriginalLanguageCode = LanguageExtensions.GetLanguageCodeFromCountryCode(country),
-            Titles = TmdbTexts.PersonNames(person.Translations, languages?.Titles),
-            Synonyms = [.. (person.AlsoKnownAs ?? []).Select(TmdbTexts.Clean).OfType<string>().Distinct().Select(name => new MetadataNameData { Name = name })],
+            OriginalLanguageCode = language,
             Gender = GenderOf(person.Gender),
             BirthDay = person.Birthday is { } birthday ? new FuzzyDateOnly(DateOnly.FromDateTime(birthday)) : null,
             DeathDay = person.Deathday is { } deathday ? new FuzzyDateOnly(DateOnly.FromDateTime(deathday)) : null,

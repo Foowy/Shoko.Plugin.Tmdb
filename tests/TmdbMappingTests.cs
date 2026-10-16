@@ -107,6 +107,34 @@ public sealed class TmdbMappingTests
             TmdbTexts.Titles(null, null, null, translations, null, null, ownName: "ビックリマン").Select(title => (title.LanguageCode, title.Type, title.Value)));
     }
 
+    [Fact]
+    public void APersonsMainNameTakesOnlyTheLanguageOfTheirOwnNameBesidesAmericanEnglish()
+    {
+        var translations = new TranslationsContainer
+        {
+            Translations =
+            [
+                new() { Iso_639_1 = "en", Iso_3166_1 = "US", Data = new() { Name = "Kana Hanazawa" } },
+                new() { Iso_639_1 = "de", Iso_3166_1 = "DE", Data = new() { Name = "Hanazawa Kana" } },
+                new() { Iso_639_1 = "ja", Iso_3166_1 = "JP", Data = new() { Name = "花澤香菜" } },
+            ],
+        };
+
+        Assert.Equal(
+            [
+                ("ja", "JP", TitleType.Main, "花澤香菜"),
+                ("en", "US", TitleType.Official, "Kana Hanazawa"),
+                ("de", "DE", TitleType.Official, "Hanazawa Kana"),
+            ],
+            TmdbTexts.PersonNames("花澤香菜", translations, null, null, "ja", "JP").Select(name => (name.LanguageCode, name.CountryCode, name.Type, name.Value))
+        );
+        // A name only another translation gives is in no known language.
+        Assert.Equal(
+            ("unk", null, TitleType.Main, "Hanazawa Kana"),
+            TmdbTexts.PersonNames("Hanazawa Kana", translations, null, null, "ja", "JP").Select(name => (name.LanguageCode, name.CountryCode, name.Type, name.Value)).First()
+        );
+    }
+
     [Theory]
     [InlineData("xx", null, TitleLanguage.None)]
     [InlineData("cn", null, TitleLanguage.Chinese)]

@@ -29,22 +29,27 @@ public sealed class TmdbEntityRefreshTests : IDisposable
         Assert.True(await _harness.Provider.RefreshEntity(TmdbIds.Creator(5001), TestContext.Current.CancellationToken));
 
         var creator = _harness.StoreData.Creators[TmdbIds.Creator(5001)];
-        Assert.Equal("Atsumi Tanezaki", creator.Name);
-        Assert.Equal("A Japanese voice actress.", creator.Overview);
         Assert.Equal(PersonGender.Female, creator.Gender);
         Assert.Equal(new FuzzyDateOnly(new DateOnly(1989, 9, 27)), creator.BirthDay);
         Assert.Null(creator.DeathDay);
         Assert.Equal("Ōita Prefecture, Japan", creator.PlaceOfBirth);
         Assert.False(creator.IsRestricted);
-        Assert.Equal(["種崎敦美", "Tanezaki Atsumi"], creator.Synonyms.Select(name => name.Name));
-        // The translations' names are the official ones, in the kept languages only, and the place of birth gives the origin.
-        Assert.Equal([("en-US", "Atsumi Tanezaki"), ("ja", "種崎敦美")], creator.Titles.Select(name => (name.LanguageCode, name.Name)));
+        // TMDB's own name is the main one, in American English as that translation gives the same name, the other translations'
+        // names are the official ones, in the kept languages only, and the other names are synonyms. The place of birth gives the origin.
+        Assert.Equal(
+            [
+                ("en", "US", TitleType.Main, "Atsumi Tanezaki"),
+                ("ja", "JP", TitleType.Official, "種崎敦美"),
+                ("unk", null, TitleType.Synonym, "種崎敦美"),
+                ("unk", null, TitleType.Synonym, "Tanezaki Atsumi"),
+            ],
+            creator.Titles.Select(title => (title.LanguageCode, title.CountryCode, title.Type, title.Value))
+        );
         Assert.Equal(("JP", "ja"), (creator.OriginalCountryCode, creator.OriginalLanguageCode));
+        // The English biography is in English of no region, and the German one is not kept.
+        Assert.Equal([("en", "A Japanese voice actress.")], creator.Overviews.Select(overview => (overview.LanguageCode, overview.Value)));
         Assert.Equal(["https://example.com/tanezaki", "https://www.imdb.com/name/nm5001/"], creator.Resources.Select(resource => resource.Url));
         Assert.Equal([(ImageEntityType.Primary, "p-5001.jpg")], creator.DefaultImageResourceIDs!.Select(pair => (pair.Key, pair.Value)));
-
-        // The English biography is the person's own and is not stored again.
-        Assert.DoesNotContain(_harness.StoreData.SetOverviews[TmdbIds.Creator(5001)], overview => overview.LanguageCode is "en");
     }
 
     [Fact]

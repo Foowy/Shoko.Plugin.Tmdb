@@ -27,20 +27,23 @@ public sealed record TmdbTextLanguages(
     public static TmdbTextLanguages All { get; } = new(null, null, null, null);
 
     /// <summary>
-    ///   The languages the configuration and the server's language order
-    ///   keep, as the core's TMDB settings did.
+    ///   The languages the configuration and the server's title and overview
+    ///   selections keep, as the core's TMDB settings did.
     /// </summary>
     /// <param name="configuration">The plugin's configuration.</param>
-    /// <param name="textManager">The core's text manager, which knows the language order.</param>
+    /// <param name="textManager">The core's text manager, which builds the selections.</param>
     /// <returns>The languages.</returns>
     public static TmdbTextLanguages From(TmdbConfiguration configuration, IMetadataTextManager textManager)
     {
-        var titles = textManager.GetLanguageOrder(TextKind.Title, MetadataEntityType.Series);
-        var episodes = textManager.GetLanguageOrder(TextKind.Title, MetadataEntityType.Episode);
+        // Read for TMDB alone, so every language is a step whatever the source order holds.
+        IReadOnlyList<MetadataSource> sources = [MetadataSource.TMDB];
+        var titles = textManager.GetTitleSelection(MetadataEntityType.Series, sources).Steps.Select(step => step.Language).ToList();
+        var episodes = textManager.GetTitleSelection(MetadataEntityType.Episode, sources).Steps.Select(step => step.Language).ToList();
+        var overviews = textManager.GetOverviewSelection(sources).Steps.Select(step => step.Language);
         return new(
             TmdbTexts.KeptLanguages(configuration.DownloadAllTitles, titles),
             TmdbTexts.KeptLanguages(configuration.DownloadAllTitles, episodes),
-            TmdbTexts.KeptLanguages(configuration.DownloadAllOverviews, textManager.GetLanguageOrder(TextKind.Overview)),
+            TmdbTexts.KeptLanguages(configuration.DownloadAllOverviews, overviews),
             configuration.DownloadAllContentRatings
                 ? null
                 : TmdbTexts.KeptLanguages(false, titles.Concat(episodes).Append(TitleLanguage.EnglishAmerican))
