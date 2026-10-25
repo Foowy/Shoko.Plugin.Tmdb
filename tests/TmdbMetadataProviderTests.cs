@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -49,7 +50,7 @@ public sealed class TmdbMetadataProviderTests : IDisposable
 
     [Fact]
     public void TheSourceIconIsThePluginIcon()
-        => Assert.Equal(new TmdbPlugin().EmbeddedIconResourceName, _harness.Provider.EmbeddedIconResourceName);
+        => Assert.Equal(PluginIcon, _harness.Provider.EmbeddedIconResourceName);
 
     [Theory]
     [InlineData(null, "https://image.tmdb.org/t/p/original/{0}")]
@@ -158,4 +159,7 @@ public sealed class TmdbMetadataProviderTests : IDisposable
     }
 
     #endregion
+
+    private static string PluginIcon
+        => typeof(TmdbPlugin).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().Single(attribute => attribute.Key == "PackageIcon").Value!;
 }

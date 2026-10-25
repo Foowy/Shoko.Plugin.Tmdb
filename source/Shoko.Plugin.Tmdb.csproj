@@ -14,6 +14,16 @@
         <EnableDynamicLoading>true</EnableDynamicLoading>
     </PropertyGroup>
 
+    <PropertyGroup Label="Plugin">
+        <PluginGenerateClass>true</PluginGenerateClass>
+        <PluginID>85d0c34f-240f-4da3-8512-d0b45118a9f4</PluginID>
+        <PluginName>TMDB</PluginName>
+        <PluginOverview>Supplies TMDB metadata for shows, movies, collections, people, studios and networks.</PluginOverview>
+        <PluginTags>tmdb</PluginTags>
+        <PluginIcon>Assets/icon.svg</PluginIcon>
+        <PluginThumbnail>Assets/thumbnail.svg</PluginThumbnail>
+    </PropertyGroup>
+
     <ItemGroup>
         <InternalsVisibleTo Include="Shoko.Plugin.Tmdb.Tests" />
     </ItemGroup>
@@ -44,15 +54,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- The plugin's thumbnail and icon, read by the server through the
-             plugin. The icon is the source's icon too, named by the provider. -->
-        <EmbeddedResource Include="Assets\thumbnail.svg" LogicalName="Shoko.Plugin.Tmdb.Assets.thumbnail.svg" />
-        <EmbeddedResource Include="Assets\icon.svg" LogicalName="Shoko.Plugin.Tmdb.Assets.icon.svg" />
-    </ItemGroup>
-
-    <ItemGroup>
         <!-- Injects the embedded plugin identity metadata the server reads during
-             discovery, from the `manifest.json` at the repository root. -->
-        <PackageReference Include="Shoko.BuildTools.Targets" Version="0.3.3" PrivateAssets="All" ExcludeAssets="runtime" />
+             discovery, from the `Plugin*` properties above, and generates the
+             plugin class from them. -->
+        <PackageReference Include="Shoko.BuildTools.Targets" Version="0.6.0" PrivateAssets="All" ExcludeAssets="runtime" />
     </ItemGroup>
 </Project>
