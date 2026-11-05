@@ -101,11 +101,12 @@ jobs:
             echo "::warning::No TMDB_API secret; the release ships without a built-in key."
           fi
 
-      # Pinned in .config/dotnet-tools.json, so the packaging of a release
-      # is reproducible instead of depending on whichever shoko-build is
-      # latest on the day it is cut.
-      - name: Restore the build tool
-        run: dotnet tool restore
+      # The newest shoko-build, so every release records what the newest
+      # manifest format holds. The update names the version it installed;
+      # the pin in .config/dotnet-tools.json is only the floor for local
+      # builds.
+      - name: Install the newest build tool
+        run: dotnet tool update --local shoko.buildtools
 
       # shoko-build discovers the plugin tags from the source, builds the
       # project, packs the whole output directory (dependencies and the
