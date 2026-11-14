@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using TMDbLib.Objects.Changes;
 
 namespace Shoko.Plugin.Tmdb.Api;
@@ -35,22 +35,25 @@ public sealed record TmdbShowChanges(IReadOnlySet<int> SeasonNumbers, IReadOnlyS
             {
                 var value = item switch
                 {
-                    ChangeItemAdded added => added.Value as JObject,
-                    ChangeItemUpdated updated => updated.Value as JObject,
-                    ChangeItemDestroyed destroyed => destroyed.Value as JObject,
+                    ChangeItemAdded added => added.Value,
+                    ChangeItemUpdated updated => updated.Value,
+                    ChangeItemDestroyed destroyed => destroyed.Value,
                     // A deleted item carries the value it had.
-                    ChangeItemDeleted deleted => deleted.OriginalValue as JObject,
+                    ChangeItemDeleted deleted => deleted.OriginalValue,
                     _ => null,
                 };
-                if (value?["season_number"]?.Value<int?>() is not { } seasonNumber)
+                if (value is not JsonElement { ValueKind: JsonValueKind.Object } element || Number(element, "season_number") is not { } seasonNumber)
                     continue;
 
                 seasons.Add(seasonNumber);
-                if (change.Key is "episode" && value["episode_number"]?.Value<int?>() is { } episodeNumber)
+                if (change.Key is "episode" && Number(element, "episode_number") is { } episodeNumber)
                     episodes.Add((seasonNumber, episodeNumber));
             }
         }
 
         return new(seasons, episodes);
     }
+
+    private static int? Number(JsonElement value, string name)
+        => value.TryGetProperty(name, out var property) && property.ValueKind is JsonValueKind.Number && property.TryGetInt32(out var number) ? number : null;
 }

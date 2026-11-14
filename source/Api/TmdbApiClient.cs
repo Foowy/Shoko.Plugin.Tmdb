@@ -155,7 +155,7 @@ public sealed class TmdbApiClient : IDisposable
     /// <returns>What TMDB answered, or <c>null</c> when it has no such entry.</returns>
     /// <exception cref="MetadataProviderNotConfiguredException">No API key is available.</exception>
     /// <exception cref="RequestLimitExceededException">TMDB kept limiting the rate.</exception>
-    /// <exception cref="GeneralHttpException">TMDB answered with an error.</exception>
+    /// <exception cref="TMDbException">TMDB answered with an error.</exception>
     /// <exception cref="HttpRequestException">TMDB could not be reached.</exception>
     public async Task<T?> UseClient<T>(Func<TMDbClient, CancellationToken, Task<T?>> call, string displayName, CancellationToken cancellationToken = default)
         where T : class
@@ -193,10 +193,9 @@ public sealed class TmdbApiClient : IDisposable
                 {
                     _logger.LogTrace("Timed out on {DisplayName}; retrying ({Attempt}).", displayName, timedOut);
                 }
-                catch (GeneralHttpException ex)
+                catch (TMDbException ex) when (IsServerError(ex))
                 {
-                    if ((int)ex.HttpStatusCode >= 500)
-                        RateLimiter.NotifyServerError();
+                    RateLimiter.NotifyServerError();
                     throw;
                 }
             }
@@ -223,10 +222,19 @@ public sealed class TmdbApiClient : IDisposable
         {
             AggregateException { InnerExceptions: [var inner] } => IsTransient(inner),
             HttpRequestException or RequestLimitExceededException => true,
-            GeneralHttpException http => (int)http.HttpStatusCode >= 500,
+            TMDbException tmdb => IsServerError(tmdb),
             TaskCanceledException { InnerException: TimeoutException } => true,
             _ => false,
         };
+
+    /// <summary>
+    ///   Whether TMDB failed on its side: a server error, or the service being
+    ///   offline, unreachable or under maintenance.
+    /// </summary>
+    /// <param name="exception">What TMDbLib threw.</param>
+    /// <returns><c>true</c> for a failure on TMDB's side.</returns>
+    public static bool IsServerError(TMDbException exception)
+        => exception is TMDbServerException or TMDbServiceUnavailableException or GeneralHttpException { HttpStatusCode: >= System.Net.HttpStatusCode.InternalServerError };
 
     private TMDbClient GetClient()
     {
@@ -318,7 +326,7 @@ public sealed class TmdbApiClient : IDisposable
             return null;
 
         var changes = await UseClient(
-            (client, token) => client.GetTvShowChangesAsync(showID, 0, since, null, token),
+            (client, token) => client.GetTvShowChangesAsync(showID, since, null, token),
             $"Get changes of show {showID}",
             cancellationToken
         ).ConfigureAwait(false);
@@ -353,7 +361,7 @@ public sealed class TmdbApiClient : IDisposable
             return true;
 
         var changes = await UseClient(
-            (client, token) => client.GetMovieChangesAsync(movieID, 0, since, null, token),
+            (client, token) => client.GetMovieChangesAsync(movieID, since, null, token),
             $"Get changes of movie {movieID}",
             cancellationToken
         ).ConfigureAwait(false);
@@ -527,7 +535,7 @@ public sealed class TmdbApiClient : IDisposable
     /// <exception cref="HttpRequestException">TMDB answered nothing.</exception>
     public async Task<SearchContainer<SearchTv>> SearchShows(string query, int page, bool includeRestricted, int year, CancellationToken cancellationToken = default)
         => await UseClient(
-            (client, token) => client.SearchTvShowAsync(query, page, includeRestricted, year, token),
+            (client, token) => client.SearchTvShowAsync(query, page, includeRestricted, year, 0, token),
             $"Search{(includeRestricted ? " all" : string.Empty)} shows for \"{query}\"{(year > 0 ? $" in {year}" : string.Empty)}, page {page}",
             cancellationToken
         ).ConfigureAwait(false) ?? throw new HttpRequestException(HttpRequestError.ConnectionError, "TMDB answered no search results.");

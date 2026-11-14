@@ -5,6 +5,7 @@ using Shoko.Abstractions.Extensions;
 using Shoko.Abstractions.Metadata;
 using Shoko.Abstractions.Metadata.Enums;
 using Shoko.Abstractions.Metadata.Storage;
+using TMDbLib.Objects.General.Schema;
 using TMDbLib.Objects.Collections;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Movies;
@@ -56,7 +57,7 @@ public static class TmdbEntityMapper
             ProductionCountries = CountryCodes(show.ProductionCountries),
             Popularity = show.Popularity > 0 ? show.Popularity : null,
             Resources = [.. Homepage(show.Homepage), .. Trailers(storeTrailers ? show.Videos : null, show.OriginalLanguage, languages)],
-            CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Series, show.ExternalIds?.ImdbId, show.ExternalIds?.TvdbId),
+            CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Series, show.ExternalIds?.ImdbId, TvdbID(show.ExternalIds?.TvdbId)),
             ContentRatings = ContentRatings(show.ContentRatings?.Results?.Select(rating => (rating.Iso_3166_1, rating.Rating)), languages.ContentRatings),
             DefaultImageResourceIDs = TmdbImages.Defaults((ImageEntityType.Primary, show.PosterPath), (ImageEntityType.Backdrop, show.BackdropPath)),
             Seasons = seasons,
@@ -120,7 +121,7 @@ public static class TmdbEntityMapper
             RatingVotes = listed.VoteCount,
             Runtime = listed.Runtime is > 0 ? TimeSpan.FromMinutes(listed.Runtime.Value) : TimeSpan.Zero,
             AirDate = listed.AirDate is { } airDate ? DateOnly.FromDateTime(airDate) : null,
-            CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Episode, details?.ExternalIds?.ImdbId, details?.ExternalIds?.TvdbId),
+            CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Episode, details?.ExternalIds?.ImdbId, TvdbID(details?.ExternalIds?.TvdbId)),
             Titles = TmdbTexts.Titles(english, null, null, details?.Translations, null, languages.EpisodeTitles),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(details?.Translations, data => data.Overview, listed.Overview), details?.Translations, languages.Overviews),
             Resources = Trailers(storeTrailers ? details?.Videos : null, originalLanguageCode, languages),
@@ -509,12 +510,15 @@ public static class TmdbEntityMapper
             ? [new() { Type = ResourceType.Metadata, Name = "IMDb", Url = $"https://www.imdb.com/{kind}/{id}/", ID = id }]
             : [];
 
+    private static string? TvdbID(int? id)
+        => id is > 0 ? id.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
+
     /// <summary>
     ///   The IDs of what a search page offers.
     /// </summary>
     /// <param name="results">The page.</param>
     /// <returns>The IDs.</returns>
-    public static IEnumerable<int> IDs(IEnumerable<SearchBase>? results)
+    public static IEnumerable<int> IDs(IEnumerable<TmdbEntity>? results)
         => (results ?? []).Select(result => result.Id);
 
     #endregion

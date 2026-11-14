@@ -57,7 +57,7 @@ public sealed class TmdbApiClientTests
         using var client = TmdbTestClient.Create(_routes);
 
         for (var attempt = 0; attempt < 3; attempt++)
-            await Assert.ThrowsAsync<GeneralHttpException>(() => client.GetShow(1001, TvShowMethods.Undefined, TestContext.Current.CancellationToken));
+            await Assert.ThrowsAnyAsync<TMDbException>(() => client.GetShow(1001, TvShowMethods.Undefined, TestContext.Current.CancellationToken));
 
         Assert.NotNull(client.RateLimiter.ServerErrorsUntil);
     }

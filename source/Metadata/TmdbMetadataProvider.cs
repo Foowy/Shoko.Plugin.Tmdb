@@ -360,6 +360,8 @@ public sealed class TmdbMetadataProvider :
             RequestLimitExceededException limited => new(MetadataSource.TMDB, "TMDB kept limiting the rate of requests.", limited.RetryAfter ?? remainingPause, exception),
             GeneralHttpException { HttpStatusCode: >= HttpStatusCode.InternalServerError } http =>
                 new(MetadataSource.TMDB, $"TMDB answered with a server error ({(int)http.HttpStatusCode}).", remainingPause, exception),
+            TMDbServiceUnavailableException => new(MetadataSource.TMDB, "TMDB is offline or under maintenance.", remainingPause, exception),
+            TMDbServerException => new(MetadataSource.TMDB, "TMDB answered with a server error.", remainingPause, exception),
             HttpRequestException => new(MetadataSource.TMDB, "TMDB could not be reached.", remainingPause, exception),
             TaskCanceledException { InnerException: TimeoutException } => new(MetadataSource.TMDB, "TMDB did not answer in time.", remainingPause, exception),
             _ => null,
