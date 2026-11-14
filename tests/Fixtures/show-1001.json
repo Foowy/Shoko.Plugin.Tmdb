@@ -96,5 +96,16 @@
         "type": 6
       }
     ]
+  },
+  "videos": {
+    "results": [
+      { "iso_639_1": "ja", "iso_3166_1": "JP", "name": "PV 1", "key": "ja-pv-1", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2023-09-01T03:00:00.000Z", "id": "v1" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Official Trailer", "key": "en-trailer-1", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2023-08-01T15:00:00.000Z", "id": "v2" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Teaser", "key": "en-teaser-1", "site": "YouTube", "size": 1080, "type": "Teaser", "official": true, "published_at": "2023-06-01T15:00:00.000Z", "id": "v3" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Fan Trailer", "key": "en-fan-1", "site": "YouTube", "size": 1080, "type": "Trailer", "official": false, "published_at": "2023-09-10T15:00:00.000Z", "id": "v4" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Official Trailer", "key": "123456789", "site": "Vimeo", "size": 1080, "type": "Trailer", "official": true, "published_at": "2023-09-05T15:00:00.000Z", "id": "v5" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Opening Sequence", "key": "en-clip-1", "site": "YouTube", "size": 1080, "type": "Opening Credits", "official": true, "published_at": "2023-09-20T15:00:00.000Z", "id": "v6" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Announcement Trailer", "key": "en-trailer-0", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2023-03-01T15:00:00.000Z", "id": "v7" }
+    ]
   }
 }

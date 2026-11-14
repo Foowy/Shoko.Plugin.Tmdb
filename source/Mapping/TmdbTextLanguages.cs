@@ -8,7 +8,7 @@ namespace Shoko.Plugin.Tmdb.Mapping;
 
 /// <summary>
 ///   The languages a refresh keeps TMDB's translations and content ratings
-///   in. A <c>null</c> set keeps them all.
+///   in, and prefers trailers in. A <c>null</c> set keeps them all.
 /// </summary>
 /// <param name="SeriesTitles">The languages of the titles of a show, a movie or a collection.</param>
 /// <param name="EpisodeTitles">The languages of the titles of an episode, a season or a person.</param>
@@ -27,6 +27,12 @@ public sealed record TmdbTextLanguages(
     public static TmdbTextLanguages All { get; } = new(null, null, null, null);
 
     /// <summary>
+    ///   The languages to prefer trailers in, best first: the server's
+    ///   overview languages, which are the ones its user reads.
+    /// </summary>
+    public IReadOnlyList<TitleLanguage> Preferred { get; init; } = [];
+
+    /// <summary>
     ///   The languages the configuration and the server's title and overview
     ///   selections keep, as the core's TMDB settings did. Seasons and people
     ///   take the episode title languages, which the server names them by.
@@ -40,7 +46,7 @@ public sealed record TmdbTextLanguages(
         IReadOnlyList<MetadataSource> sources = [MetadataSource.TMDB];
         var series = textManager.GetTitleSelection(MetadataEntityType.Series, sources).Steps.Select(step => step.Language).ToList();
         var episodes = textManager.GetTitleSelection(MetadataEntityType.Episode, sources).Steps.Select(step => step.Language).ToList();
-        var overviews = textManager.GetOverviewSelection(sources).Steps.Select(step => step.Language);
+        var overviews = textManager.GetOverviewSelection(sources).Steps.Select(step => step.Language).ToList();
         return new(
             TmdbTexts.KeptLanguages(configuration.DownloadAllTitles, series),
             TmdbTexts.KeptLanguages(configuration.DownloadAllTitles, episodes),
@@ -48,6 +54,9 @@ public sealed record TmdbTextLanguages(
             configuration.DownloadAllContentRatings
                 ? null
                 : TmdbTexts.KeptLanguages(false, series.Concat(episodes).Append(TitleLanguage.EnglishAmerican))
-        );
+        )
+        {
+            Preferred = overviews,
+        };
     }
 }

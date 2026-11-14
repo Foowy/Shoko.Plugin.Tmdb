@@ -57,5 +57,11 @@
       { "iso_3166_1": "US", "iso_639_1": "en", "name": "English", "english_name": "English", "data": { "title": "Journey's End: The Movie", "overview": "The journey continues on the big screen.", "homepage": "", "tagline": "", "runtime": 106 } },
       { "iso_3166_1": "DE", "iso_639_1": "de", "name": "Deutsch", "english_name": "German", "data": { "title": "Das Ende der Reise: Der Film", "overview": "Die Reise geht im Kino weiter.", "homepage": "", "tagline": "", "runtime": 106 } }
     ]
+  },
+  "videos": {
+    "results": [
+      { "iso_639_1": "ja", "iso_3166_1": "JP", "name": "本予告", "key": "movie-ja-trailer", "site": "YouTube", "size": 1080, "type": "Trailer", "official": true, "published_at": "2024-11-01T03:00:00.000Z", "id": "m1" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Teaser Trailer", "key": "movie-en-teaser", "site": "YouTube", "size": 1080, "type": "Teaser", "official": true, "published_at": "2024-10-01T15:00:00.000Z", "id": "m2" }
+    ]
   }
 }

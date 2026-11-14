@@ -50,10 +50,12 @@ public sealed class TmdbRefreshService(
     ///   the refresh is quick; the core fetches the people, studios and
     ///   networks they name for the kinds turned on. The episode groups as
     ///   orderings follow the options, or the settings where they leave it
-    ///   open. A quick refresh leaves out the credits and the episode groups
-    ///   and fetches no episode on its own. A refresh with a last refresh
-    ///   time inside the changes window only fetches the seasons and episodes
-    ///   TMDB changed since. A show TMDB no longer has is left as it was
+    ///   open. The trailers of the show and its episodes ride along on their
+    ///   requests while the setting is on. A quick refresh leaves out the
+    ///   credits and the episode groups and fetches no episode on its own,
+    ///   so the episodes keep the trailers stored for them. A refresh with a
+    ///   last refresh time inside the changes window only fetches the seasons
+    ///   and episodes TMDB changed since. A show TMDB no longer has is left as it was
     ///   stored. The core matches the linked anime's episodes again once the
     ///   refresh is done.
     /// </remarks>
@@ -78,6 +80,9 @@ public sealed class TmdbRefreshService(
             TvShowMethods.Keywords | TvShowMethods.Recommendations | TvShowMethods.Similar;
         if (downloadOrderings)
             methods |= TvShowMethods.EpisodeGroups;
+        var storeTrailers = configuration.StoreTrailerLinks;
+        if (storeTrailers)
+            methods |= TvShowMethods.Videos;
 
         logger.LogInformation("Refreshing TMDB show {ShowID}.", showID);
         if (await apiClient.GetShow(showID, methods, cancellationToken).ConfigureAwait(false) is not { } show)
@@ -107,7 +112,7 @@ public sealed class TmdbRefreshService(
                 seasons.Add(CarrySeason(unchangedSeason));
                 foreach (var episode in storedEpisodes.Values.Where(episode => episode.SeasonID == seasonID).OrderBy(episode => episode.EpisodeNumber))
                 {
-                    episodes.Add(CarryEpisode(episode));
+                    episodes.Add(CarryEpisode(episode, storeTrailers));
                     credits.Add(new(seasonID, episode.ID, null, null));
                 }
 
@@ -123,17 +128,23 @@ public sealed class TmdbRefreshService(
                 storedEpisodes.TryGetValue(episodeID, out var known);
                 if (known is not null && changes is not null && !changes.Episodes.Contains((listed.SeasonNumber, (int)listed.EpisodeNumber)))
                 {
-                    episodes.Add(CarryEpisode(known) with { SeasonID = seasonID });
+                    episodes.Add(CarryEpisode(known, storeTrailers) with { SeasonID = seasonID });
                     credits.Add(new(seasonID, episodeID, null, null));
                     continue;
                 }
 
                 if (quick)
                 {
-                    var listedOnly = TmdbEntityMapper.ToEpisodeData(listedSeason.Id, listed, null, languages);
+                    var listedOnly = TmdbEntityMapper.ToEpisodeData(listedSeason.Id, listed, null, languages, show.OriginalLanguage, storeTrailers);
                     episodes.Add(known is null
                         ? listedOnly
-                        : listedOnly with { Titles = StoredTitles(known.ID), Overviews = StoredOverviews(known.ID), CrossSourceIDs = known.CrossSourceIDs });
+                        : listedOnly with
+                        {
+                            Titles = StoredTitles(known.ID),
+                            Overviews = StoredOverviews(known.ID),
+                            CrossSourceIDs = known.CrossSourceIDs,
+                            Resources = StoredTrailers(known, storeTrailers),
+                        });
                     credits.Add(new(seasonID, episodeID, null, null));
                     continue;
                 }
@@ -141,8 +152,10 @@ public sealed class TmdbRefreshService(
                 var episodeMethods = TvEpisodeMethods.ExternalIds | TvEpisodeMethods.Translations;
                 if (downloadCredits)
                     episodeMethods |= TvEpisodeMethods.Credits;
+                if (storeTrailers)
+                    episodeMethods |= TvEpisodeMethods.Videos;
                 var details = await apiClient.GetEpisode(show.Id, listed.SeasonNumber, (int)listed.EpisodeNumber, episodeMethods, cancellationToken).ConfigureAwait(false);
-                episodes.Add(TmdbEntityMapper.ToEpisodeData(listedSeason.Id, listed, details, languages));
+                episodes.Add(TmdbEntityMapper.ToEpisodeData(listedSeason.Id, listed, details, languages, show.OriginalLanguage, storeTrailers));
                 credits.Add(details?.Credits is { } episodeCredits && downloadCredits
                     ? new(
                         seasonID,
@@ -154,7 +167,7 @@ public sealed class TmdbRefreshService(
             }
         }
 
-        var data = TmdbEntityMapper.ToSeriesData(show, seasons, episodes, languages);
+        var data = TmdbEntityMapper.ToSeriesData(show, seasons, episodes, languages, storeTrailers);
         var changed = stores.Series.SaveSeries(data);
 
         var (tags, entryTags) = TmdbEntityMapper.Tags(show.Genres, show.Keywords?.Results);
@@ -322,8 +335,9 @@ public sealed class TmdbRefreshService(
     ///   A stored episode, as it is written again.
     /// </summary>
     /// <param name="episode">The stored episode.</param>
+    /// <param name="keepTrailers">Whether its stored trailers are kept.</param>
     /// <returns>The episode.</returns>
-    private MetadataEpisodeData CarryEpisode(IEpisode episode)
+    private MetadataEpisodeData CarryEpisode(IEpisode episode, bool keepTrailers)
         => new()
         {
             ID = episode.ID,
@@ -338,7 +352,12 @@ public sealed class TmdbRefreshService(
             CrossSourceIDs = episode.CrossSourceIDs,
             Titles = StoredTitles(episode.ID),
             Overviews = StoredOverviews(episode.ID),
+            Resources = StoredTrailers(episode, keepTrailers),
         };
+
+    // Only the trailers, as the resources read back hold what other plugins add too.
+    private static IReadOnlyList<Resource> StoredTrailers(IEpisode episode, bool keep)
+        => keep ? [.. episode.Resources.Where(TmdbTrailers.IsTrailer)] : [];
 
     private IReadOnlyList<ITitle> StoredTitles(MetadataGuid entryID)
         => stores.Texts.GetTitles(entryID, StoredTexts());
@@ -371,7 +390,9 @@ public sealed class TmdbRefreshService(
     /// </summary>
     /// <remarks>
     ///   The credits are written unless the refresh is quick, naming the
-    ///   people by ID. The movie names its collection by ID, and the core
+    ///   people by ID. The trailers ride along on the movie's request while
+    ///   the setting is on, and a movie still holding some once it is off is
+    ///   fetched again to drop them. The movie names its collection by ID, and the core
     ///   fetches the collection through <see cref="RefreshCollection"/>, and
     ///   the people and studios through the entity provider, for the kinds
     ///   turned on. A movie TMDB no longer has is left as it was stored.
@@ -392,7 +413,9 @@ public sealed class TmdbRefreshService(
         var quick = options.QuickRefresh;
         var downloadCredits = !quick;
         var movieGuid = TmdbIds.Movie(movieID);
-        if (stores.Movies.GetMovie(movieGuid) is not null && options.LastRefreshedAt is { } lastRefreshedAt &&
+        // A movie still holding trailers after they were turned off is fetched again to drop them.
+        if (stores.Movies.GetMovie(movieGuid) is { } storedMovie && options.LastRefreshedAt is { } lastRefreshedAt &&
+            (configuration.StoreTrailerLinks || !storedMovie.Resources.Any(TmdbTrailers.IsTrailer)) &&
             !await HasMovieChanged(movieID, lastRefreshedAt, cancellationToken).ConfigureAwait(false))
         {
             logger.LogInformation("Skipping TMDB movie {MovieID}, which did not change since {LastRefreshedAt}.", movieID, lastRefreshedAt);
@@ -403,6 +426,8 @@ public sealed class TmdbRefreshService(
             MovieMethods.Keywords | MovieMethods.Recommendations | MovieMethods.Similar;
         if (downloadCredits)
             methods |= MovieMethods.Credits;
+        if (configuration.StoreTrailerLinks)
+            methods |= MovieMethods.Videos;
 
         logger.LogInformation("Refreshing TMDB movie {MovieID}.", movieID);
         if (await apiClient.GetMovie(movieID, methods, cancellationToken).ConfigureAwait(false) is not { } movie)
@@ -412,7 +437,7 @@ public sealed class TmdbRefreshService(
         }
 
         var languages = TmdbTextLanguages.From(configuration, stores.Texts);
-        stores.Movies.SaveMovie(TmdbEntityMapper.ToMovieData(movie, languages));
+        stores.Movies.SaveMovie(TmdbEntityMapper.ToMovieData(movie, languages, configuration.StoreTrailerLinks));
 
         var (tags, entryTags) = TmdbEntityMapper.Tags(movie.Genres, movie.Keywords?.Keywords);
         stores.Tags.SaveTags(tags);

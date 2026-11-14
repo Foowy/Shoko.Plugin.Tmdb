@@ -29,6 +29,10 @@ ask on [Discord](https://discord.gg/shokoanime).
 - **Images.** Posters, backdrops, logos and profile pictures, with the one
   TMDB uses for an entry picked as its default.
 - **Links to TMDB.** Everything with a page on themoviedb.org links to it.
+- **Trailers.** Links to the official trailers and teasers TMDB lists on
+  YouTube, up to three for each show, movie and episode, in the languages you
+  read first, then English, then the original language. Only the links are
+  stored; nothing is downloaded.
 
 When Shoko searches TMDB for an anime, it compares titles, air dates and
 episode counts, scores each candidate and links the best ones. Episodes are
@@ -46,6 +50,7 @@ They're saved in `tmdb.json` in the plugin's configuration folder.
 | Download All Overviews | off | The same, for overviews. |
 | Download All Content Ratings | off | The same, for content ratings. |
 | Auto Download Alternate Ordering | off | Downloads TMDB's episode groups to use as alternate orderings. |
+| Store Trailer Links From TMDB | on | Keeps links to the trailers TMDB lists. Turned off, TMDB isn't asked for videos, and an entry's stored links go at its next refresh. |
 | Auto Search Show Candidate Count | `5` | How many shows (`1` to `10`) a search looks at closely. More is slower but finds more. |
 | Auto Search Movie Candidate Count | `5` | The same, for movies. |
 | Incremental Changes Window Days | `1` | How many days back (`0` to `14`) to ask TMDB for changes. `0` turns the change check off. |

@@ -37,7 +37,7 @@ public sealed class TmdbRefreshServiceTests : IDisposable
         Assert.Equal(ReleaseStatus.Finished, series.ReleaseStatus);
         Assert.Equal("ja", series.OriginalLanguageCode);
         Assert.Equal(["JP"], series.ProductionCountries);
-        Assert.Equal(["https://example.com/journey"], series.Resources.Select(resource => resource.Url));
+        Assert.Equal(["https://example.com/journey"], series.Resources.Where(resource => resource.Type is ResourceType.Website).Select(resource => resource.Url));
         Assert.Equal([TmdbIds.Season(2000), TmdbIds.Season(2001)], series.Seasons.Select(season => season.ID));
         Assert.Equal([TmdbIds.Episode(3000), TmdbIds.Episode(3001), TmdbIds.Episode(3002)], series.Episodes.Select(episode => episode.ID));
 

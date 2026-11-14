@@ -27,12 +27,13 @@ public static class TmdbEntityMapper
     /// <summary>
     ///   A show, with the seasons and episodes worked out for it.
     /// </summary>
-    /// <param name="show">The show, with its translations, alternative titles, external IDs and content ratings.</param>
+    /// <param name="show">The show, with its translations, alternative titles, external IDs, content ratings and, when asked for, videos.</param>
     /// <param name="seasons">Its seasons.</param>
     /// <param name="episodes">Its episodes.</param>
     /// <param name="languages">The languages to keep.</param>
+    /// <param name="storeTrailers">Whether the show's trailers are kept.</param>
     /// <returns>The show to store.</returns>
-    public static MetadataSeriesData ToSeriesData(TvShow show, IReadOnlyList<MetadataSeasonData> seasons, IReadOnlyList<MetadataEpisodeData> episodes, TmdbTextLanguages languages)
+    public static MetadataSeriesData ToSeriesData(TvShow show, IReadOnlyList<MetadataSeasonData> seasons, IReadOnlyList<MetadataEpisodeData> episodes, TmdbTextLanguages languages, bool storeTrailers = true)
     {
         ArgumentNullException.ThrowIfNull(show);
 
@@ -54,7 +55,7 @@ public static class TmdbEntityMapper
             OriginalCountryCode = (show.OriginCountry ?? []).Select(TmdbTexts.Clean).OfType<string>().FirstOrDefault()?.ToUpperInvariant(),
             ProductionCountries = CountryCodes(show.ProductionCountries),
             Popularity = show.Popularity > 0 ? show.Popularity : null,
-            Resources = Homepage(show.Homepage),
+            Resources = [.. Homepage(show.Homepage), .. Trailers(storeTrailers ? show.Videos : null, show.OriginalLanguage, languages)],
             CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Series, show.ExternalIds?.ImdbId, show.ExternalIds?.TvdbId),
             ContentRatings = ContentRatings(show.ContentRatings?.Results?.Select(rating => (rating.Iso_3166_1, rating.Rating)), languages.ContentRatings),
             DefaultImageResourceIDs = TmdbImages.Defaults((ImageEntityType.Primary, show.PosterPath), (ImageEntityType.Backdrop, show.BackdropPath)),
@@ -86,14 +87,24 @@ public static class TmdbEntityMapper
 
     /// <summary>
     ///   One episode of a season, as the season lists it and, when it was
-    ///   fetched on its own, with its translations and external IDs.
+    ///   fetched on its own, with its translations, external IDs and, when
+    ///   asked for, videos.
     /// </summary>
     /// <param name="seasonID">The TMDB season ID.</param>
     /// <param name="listed">The episode as the season lists it.</param>
     /// <param name="details">The episode fetched on its own, or <c>null</c>.</param>
     /// <param name="languages">The languages to keep.</param>
+    /// <param name="originalLanguageCode">The show's original language, the last its trailers are preferred in.</param>
+    /// <param name="storeTrailers">Whether the episode's trailers are kept.</param>
     /// <returns>The episode to store.</returns>
-    public static MetadataEpisodeData ToEpisodeData(int seasonID, TvSeasonEpisode listed, TvEpisode? details, TmdbTextLanguages languages)
+    public static MetadataEpisodeData ToEpisodeData(
+        int seasonID,
+        TvSeasonEpisode listed,
+        TvEpisode? details,
+        TmdbTextLanguages languages,
+        string? originalLanguageCode = null,
+        bool storeTrailers = true
+    )
     {
         ArgumentNullException.ThrowIfNull(listed);
 
@@ -112,6 +123,7 @@ public static class TmdbEntityMapper
             CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Episode, details?.ExternalIds?.ImdbId, details?.ExternalIds?.TvdbId),
             Titles = TmdbTexts.Titles(english, null, null, details?.Translations, null, languages.EpisodeTitles),
             Overviews = TmdbTexts.Overviews(TmdbTexts.English(details?.Translations, data => data.Overview, listed.Overview), details?.Translations, languages.Overviews),
+            Resources = Trailers(storeTrailers ? details?.Videos : null, originalLanguageCode, languages),
             DefaultImageResourceIDs = TmdbImages.Defaults((ImageEntityType.Backdrop, listed.StillPath ?? details?.StillPath)),
         };
     }
@@ -139,10 +151,11 @@ public static class TmdbEntityMapper
     ///   A movie, with the collection TMDB puts it in, whether or not the
     ///   collection is downloaded.
     /// </summary>
-    /// <param name="movie">The movie, with its translations, alternative titles, release dates and external IDs.</param>
+    /// <param name="movie">The movie, with its translations, alternative titles, release dates, external IDs and, when asked for, videos.</param>
     /// <param name="languages">The languages to keep.</param>
+    /// <param name="storeTrailers">Whether the movie's trailers are kept.</param>
     /// <returns>The movie to store.</returns>
-    public static MetadataMovieData ToMovieData(Movie movie, TmdbTextLanguages languages)
+    public static MetadataMovieData ToMovieData(Movie movie, TmdbTextLanguages languages, bool storeTrailers = true)
     {
         ArgumentNullException.ThrowIfNull(movie);
 
@@ -160,7 +173,7 @@ public static class TmdbEntityMapper
             ProductionCountries = CountryCodes(movie.ProductionCountries),
             Rating = movie.VoteAverage,
             RatingVotes = movie.VoteCount,
-            Resources = Homepage(movie.Homepage),
+            Resources = [.. Homepage(movie.Homepage), .. Trailers(storeTrailers ? movie.Videos : null, movie.OriginalLanguage, languages)],
             CrossSourceIDs = CrossSourceIDs(MetadataEntityType.Movie, movie.ExternalIds?.ImdbId ?? movie.ImdbId, null),
             ContentRatings = ContentRatings(
                 (movie.ReleaseDates?.Results ?? [])
@@ -476,6 +489,19 @@ public static class TmdbEntityMapper
     public static IReadOnlyList<Resource> Homepage(string? homepage)
         => TmdbTexts.Clean(homepage) is { } url && Uri.TryCreate(url, UriKind.Absolute, out _)
             ? [new() { Type = ResourceType.Website, Name = "Homepage", Url = url }]
+            : [];
+
+    /// <summary>
+    ///   An entry's trailers, as resources, picked by
+    ///   <see cref="TmdbTrailers.Select"/>.
+    /// </summary>
+    /// <param name="videos">The videos, or <c>null</c> when none were asked for.</param>
+    /// <param name="originalLanguageCode">The entry's original language.</param>
+    /// <param name="languages">The languages to prefer.</param>
+    /// <returns>The trailers, or none.</returns>
+    public static IReadOnlyList<Resource> Trailers(ResultContainer<Video>? videos, string? originalLanguageCode, TmdbTextLanguages languages)
+        => videos?.Results is { Count: > 0 } results
+            ? TmdbTrailers.Select(results, TmdbTrailers.LanguageOrder(languages.Preferred, originalLanguageCode))
             : [];
 
     private static IEnumerable<Resource> ImdbResource(string? imdbID, string kind)

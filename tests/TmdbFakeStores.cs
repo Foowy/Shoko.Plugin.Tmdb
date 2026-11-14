@@ -294,6 +294,7 @@ internal sealed class TmdbFakeStores
         episode.SetupGet(mock => mock.Runtime).Returns(data.Runtime);
         episode.SetupGet(mock => mock.AirDate).Returns(data.AirDate);
         episode.SetupGet(mock => mock.CrossSourceIDs).Returns(data.CrossSourceIDs);
+        episode.SetupGet(mock => mock.Resources).Returns(data.Resources);
         episode.SetupGet(mock => mock.Titles).Returns(data.Titles);
         episode.SetupGet(mock => mock.DefaultTitle).Returns(DefaultTitle(data.Titles));
         return episode.Object;
@@ -307,6 +308,7 @@ internal sealed class TmdbFakeStores
         movie.SetupGet(mock => mock.DefaultTitle).Returns(DefaultTitle(data.Titles));
         movie.SetupGet(mock => mock.OriginalLanguageCode).Returns(data.OriginalLanguageCode);
         movie.SetupGet(mock => mock.ReleaseDate).Returns(data.ReleaseDate?.ToDateTime(TimeOnly.MinValue));
+        movie.SetupGet(mock => mock.Resources).Returns(data.Resources);
         return movie.Object;
     }
 

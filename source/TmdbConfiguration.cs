@@ -64,6 +64,19 @@ public class TmdbConfiguration : IMetadataProviderConfiguration, IPluginConfigur
     /// </summary>
     public bool AutoDownloadAlternateOrdering { get; set; } = false;
 
+    /// <summary>
+    /// Store links to the official trailers and teasers TMDB lists on YouTube
+    /// for shows, movies and episodes. Only the links are stored; nothing is
+    /// downloaded.
+    /// </summary>
+    /// <remarks>
+    /// Turning this off stops asking TMDB for videos, and each entry's stored
+    /// links are dropped at its next refresh.
+    /// </remarks>
+    [Display(Name = "Store Trailer Links From TMDB")]
+    [DefaultValue(true)]
+    public bool StoreTrailerLinks { get; set; } = true;
+
     #endregion
 
     #region Connection

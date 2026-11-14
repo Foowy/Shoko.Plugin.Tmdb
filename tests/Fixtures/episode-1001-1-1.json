@@ -20,5 +20,11 @@
       { "iso_3166_1": "DE", "iso_639_1": "de", "name": "Deutsch", "english_name": "German", "data": { "name": "Das Ende der Reise", "overview": "Die Gruppe kehrt heim." } },
       { "iso_3166_1": "FR", "iso_639_1": "fr", "name": "Français", "english_name": "French", "data": { "name": "Épisode 1", "overview": "" } }
     ]
+  },
+  "videos": {
+    "results": [
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Episode 1 Preview", "key": "ep-1-preview", "site": "YouTube", "size": 1080, "type": "Teaser", "official": true, "published_at": "2023-09-22T15:00:00.000Z", "id": "e1" },
+      { "iso_639_1": "en", "iso_3166_1": "US", "name": "Clip", "key": "ep-1-clip", "site": "YouTube", "size": 1080, "type": "Clip", "official": true, "published_at": "2023-09-29T15:00:00.000Z", "id": "e2" }
+    ]
   }
 }
