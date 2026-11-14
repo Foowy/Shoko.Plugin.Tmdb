@@ -38,6 +38,7 @@ public static class TmdbSearchResults
             OriginalTitle = TmdbTexts.Clean(show.OriginalName),
             OriginalLanguageCode = TmdbTexts.Clean(show.OriginalLanguage),
             Overview = TmdbTexts.Clean(show.Overview),
+            IsRestricted = show.Adult,
             UserRating = (decimal)show.VoteAverage,
             UserVotes = show.VoteCount,
             PosterUrl = TmdbImages.Url(imageServerUrl, show.PosterPath),
