@@ -65,6 +65,23 @@ public class TmdbConfiguration : IMetadataProviderConfiguration, IPluginConfigur
     public bool AutoDownloadAlternateOrdering { get; set; } = false;
 
     /// <summary>
+    /// Store the cast and crew of each show, season, episode and movie.
+    /// Turned off, TMDB isn't asked for credits, and an entry's stored cast
+    /// and crew go at its next full refresh.
+    /// </summary>
+    [Display(Name = "Download Cast and Crew")]
+    [DefaultValue(true)]
+    public bool DownloadCastAndCrew { get; set; } = true;
+
+    /// <summary>
+    /// Store the networks each show aired on. Turned off, a show's stored
+    /// networks go at its next refresh.
+    /// </summary>
+    [Display(Name = "Download Networks")]
+    [DefaultValue(true)]
+    public bool DownloadNetworks { get; set; } = true;
+
+    /// <summary>
     /// Store links to the official trailers and teasers TMDB lists on YouTube
     /// for shows, movies and episodes. Only the links are stored; nothing is
     /// downloaded.

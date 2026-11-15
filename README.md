@@ -50,6 +50,8 @@ They're saved in `tmdb.json` in the plugin's configuration folder.
 | Download All Overviews | off | The same, for overviews. |
 | Download All Content Ratings | off | The same, for content ratings. |
 | Auto Download Alternate Ordering | off | Downloads TMDB's episode groups to use as alternate orderings. |
+| Download Cast and Crew | on | Keeps each entry's cast and crew. Turned off, TMDB isn't asked for credits, and an entry's stored ones go at its next full refresh. |
+| Download Networks | on | Keeps the networks each show aired on. Turned off, a show's stored networks go at its next refresh. |
 | Store Trailer Links From TMDB | on | Keeps links to the trailers TMDB lists. Turned off, TMDB isn't asked for videos, and an entry's stored links go at its next refresh. |
 | Auto Search Show Candidate Count | `5` | How many shows (`1` to `10`) a search looks at closely. More is slower but finds more. |
 | Auto Search Movie Candidate Count | `5` | The same, for movies. |

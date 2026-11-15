@@ -74,7 +74,7 @@ public sealed class TmdbRefreshService(
 
         var configuration = configurationProvider.Load();
         var quick = options.QuickRefresh;
-        var downloadCredits = !quick;
+        var downloadCredits = !quick && configuration.DownloadCastAndCrew;
         var downloadOrderings = !quick && (options.DownloadAlternateOrdering ?? configuration.AutoDownloadAlternateOrdering);
         var methods = TvShowMethods.ContentRatings | TvShowMethods.Translations | TvShowMethods.AlternativeTitles | TvShowMethods.ExternalIds |
             TvShowMethods.Keywords | TvShowMethods.Recommendations | TvShowMethods.Similar;
@@ -182,12 +182,21 @@ public sealed class TmdbRefreshService(
             TmdbEntityMapper.IDs(show.Similar?.Results),
             TmdbIds.Series
         ));
-        var (networks, entryNetworks) = TmdbEntityMapper.Networks(show.Networks);
-        stores.Studios.SaveNetworks(networks);
-        stores.Studios.SetNetworks(seriesID, entryNetworks);
+        if (configuration.DownloadNetworks)
+        {
+            var (networks, entryNetworks) = TmdbEntityMapper.Networks(show.Networks);
+            stores.Studios.SaveNetworks(networks);
+            stores.Studios.SetNetworks(seriesID, entryNetworks);
+        }
+        else
+        {
+            stores.Studios.SetNetworks(seriesID, Array.Empty<MetadataEntryNetworkData>());
+        }
 
         if (downloadCredits)
             WriteCredits(seriesID, credits);
+        else if (!quick)
+            ClearCredits([seriesID, .. data.Seasons.Select(season => season.ID), .. data.Episodes.Select(episode => episode.ID)]);
 
         if (downloadOrderings)
             await UpdateOrderings(show, data.Episodes.Select(episode => episode.ID).ToHashSet(), cancellationToken).ConfigureAwait(false);
@@ -221,6 +230,20 @@ public sealed class TmdbRefreshService(
         {
             logger.LogWarning(ex, "Unable to ask TMDB what changed of show {ShowID}; fetching it whole.", showID);
             return null;
+        }
+    }
+
+    /// <summary>
+    ///   Removes the stored cast and crew of entries, for when they are no
+    ///   longer downloaded.
+    /// </summary>
+    /// <param name="entries">The entries.</param>
+    private void ClearCredits(IEnumerable<MetadataGuid> entries)
+    {
+        foreach (var entry in entries)
+        {
+            stores.People.SetCast(entry, []);
+            stores.People.SetCrew(entry, []);
         }
     }
 
@@ -411,11 +434,12 @@ public sealed class TmdbRefreshService(
 
         var configuration = configurationProvider.Load();
         var quick = options.QuickRefresh;
-        var downloadCredits = !quick;
+        var downloadCredits = !quick && configuration.DownloadCastAndCrew;
         var movieGuid = TmdbIds.Movie(movieID);
-        // A movie still holding trailers after they were turned off is fetched again to drop them.
+        // A movie still holding trailers or credits after they were turned off is fetched again to drop them.
         if (stores.Movies.GetMovie(movieGuid) is { } storedMovie && options.LastRefreshedAt is { } lastRefreshedAt &&
             (configuration.StoreTrailerLinks || !storedMovie.Resources.Any(TmdbTrailers.IsTrailer)) &&
+            (configuration.DownloadCastAndCrew || (stores.People.GetCast(movieGuid).Count is 0 && stores.People.GetCrew(movieGuid).Count is 0)) &&
             !await HasMovieChanged(movieID, lastRefreshedAt, cancellationToken).ConfigureAwait(false))
         {
             logger.LogInformation("Skipping TMDB movie {MovieID}, which did not change since {LastRefreshedAt}.", movieID, lastRefreshedAt);
@@ -455,6 +479,10 @@ public sealed class TmdbRefreshService(
         {
             stores.People.SetCast(movieGuid, TmdbCredits.MovieCast(movieCredits.Cast, movie.OriginalLanguage));
             stores.People.SetCrew(movieGuid, TmdbCredits.Crew(movieCredits.Crew, movie.OriginalLanguage));
+        }
+        else if (!quick && !configuration.DownloadCastAndCrew)
+        {
+            ClearCredits([movieGuid]);
         }
 
         logger.LogInformation("Refreshed TMDB movie {MovieID} ({Title}).", movie.Id, movie.Title);
