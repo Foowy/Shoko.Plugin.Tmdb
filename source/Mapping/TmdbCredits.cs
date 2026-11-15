@@ -17,10 +17,12 @@ namespace Shoko.Plugin.Tmdb.Mapping;
 ///   season's credits from its episodes'.
 /// </summary>
 /// <remarks>
-///   TMDB has no characters of its own, so a cast credit names the person
-///   and the role they are credited under. Each credit carries the person's
-///   name, so the core keeps a stub for anyone not fetched yet. The language
-///   is the work's original one, as TMDB only lists the original cast.
+///   TMDB has no characters of its own, so each cast credit gets a character
+///   keyed by TMDB's credit ID (<see cref="TmdbIds.Character"/>), named after
+///   the role, which the core keeps as a stub. Each credit carries the
+///   person's name, so the core keeps a stub for anyone not fetched yet too.
+///   The language is the work's original one, as TMDB only lists the
+///   original cast.
 /// </remarks>
 public static class TmdbCredits
 {
@@ -44,8 +46,8 @@ public static class TmdbCredits
     /// <returns>The credits, in TMDB's order.</returns>
     public static IReadOnlyList<MetadataCastData> EpisodeCast(IEnumerable<TvCast>? cast, IEnumerable<TvCast>? guestStars, string? languageCode)
         => [
-            .. (cast ?? []).Where(credit => credit.Id > 0).Select(credit => Cast(credit.Id, credit.Name, credit.Character, languageCode, null)),
-            .. (guestStars ?? []).Where(credit => credit.Id > 0).Select(credit => Cast(credit.Id, credit.Name, credit.Character, languageCode, GuestStarNotes)),
+            .. (cast ?? []).Where(credit => credit.Id > 0).Select(credit => Cast(credit.Id, credit.Name, credit.CreditId, credit.Character, languageCode, null)),
+            .. (guestStars ?? []).Where(credit => credit.Id > 0).Select(credit => Cast(credit.Id, credit.Name, credit.CreditId, credit.Character, languageCode, GuestStarNotes)),
         ];
 
     /// <summary>
@@ -55,7 +57,7 @@ public static class TmdbCredits
     /// <param name="languageCode">The movie's original language.</param>
     /// <returns>The credits, in TMDB's order.</returns>
     public static IReadOnlyList<MetadataCastData> MovieCast(IEnumerable<MovieCast>? cast, string? languageCode)
-        => [.. (cast ?? []).Where(credit => credit.Id > 0).OrderBy(credit => credit.Order).Select(credit => Cast(credit.Id, credit.Name, credit.Character, languageCode, null))];
+        => [.. (cast ?? []).Where(credit => credit.Id > 0).OrderBy(credit => credit.Order).Select(credit => Cast(credit.Id, credit.Name, credit.CreditId, credit.Character, languageCode, null))];
 
     /// <summary>
     ///   An episode's or a movie's crew.
@@ -113,9 +115,10 @@ public static class TmdbCredits
             _ => CrewRoleType.None,
         };
 
-    private static MetadataCastData Cast(int personID, string? personName, string? character, string? languageCode, string? notes)
+    private static MetadataCastData Cast(int personID, string? personName, string? creditID, string? character, string? languageCode, string? notes)
         => new()
         {
+            CharacterID = TmdbTexts.Clean(creditID) is { } credit ? TmdbIds.Character(credit) : null,
             CreatorID = TmdbIds.Creator(personID),
             CreatorName = TmdbTexts.Clean(personName),
             Name = TmdbTexts.Clean(character?.Replace(" (voice)", string.Empty, StringComparison.Ordinal)) ?? string.Empty,

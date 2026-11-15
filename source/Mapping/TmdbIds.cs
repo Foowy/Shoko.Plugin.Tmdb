@@ -123,6 +123,17 @@ public static class TmdbIds
         => new(MetadataSource.TMDB, MetadataEntityType.Tag, KeywordPrefix + Format(keywordID));
 
     /// <summary>
+    ///   A character, as TMDB credits one person with it on one show or
+    ///   movie. TMDB has no characters of its own, so the credit stands for
+    ///   the character; a show's regular and recurring cast keep one credit
+    ///   across its episodes.
+    /// </summary>
+    /// <param name="creditID">The TMDB credit ID.</param>
+    /// <returns>The identifier.</returns>
+    public static MetadataGuid Character(string creditID)
+        => new(MetadataSource.TMDB, MetadataEntityType.Character, creditID);
+
+    /// <summary>
     ///   An episode group collection, as an ordering.
     /// </summary>
     /// <param name="collectionID">The episode group collection ID.</param>

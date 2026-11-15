@@ -176,6 +176,20 @@ public sealed class TmdbMappingTests
     }
 
     [Fact]
+    public void ACastCreditNamesTheCharacterTmdbCreditsThePersonWith()
+    {
+        var credits = TmdbCredits.EpisodeCast(
+            [new TMDbLib.Objects.TvShows.Cast { Id = 1, Name = "Atsumi Tanezaki", Character = "Frieren (voice)", CreditId = "640837ff5e120000b0f2b80e" }],
+            [new TMDbLib.Objects.TvShows.Cast { Id = 2, Name = "Atsuko Tanaka", Character = "Flamme (voice)", CreditId = "652ae7f90cb33516f74752de" }, new TMDbLib.Objects.TvShows.Cast { Id = 3, Name = "Someone" }],
+            "ja"
+        );
+
+        Assert.Equal(
+            [("tmdb://character/640837ff5e120000b0f2b80e", "Frieren"), ("tmdb://character/652ae7f90cb33516f74752de", "Flamme"), (null, "")],
+            credits.Select(credit => (credit.CharacterID?.ToString(), credit.Name)));
+    }
+
+    [Fact]
     public void AStoredCastCreditIsWrittenAgainAsItWas()
     {
         var stored = Mock.Of<ICast>(cast =>
